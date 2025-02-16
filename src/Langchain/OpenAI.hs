@@ -20,18 +20,13 @@ import GHC.Generics
 import Langchain.LLM
 import Network.HTTP.Simple
 import System.Environment (lookupEnv)
+import Data.List.NonEmpty (NonEmpty)
 
 newtype OpenAI = OpenAI {mbApiKey :: Maybe Text}
 
-data Message = Message
-    { role :: Text
-    , content :: [Text]
-    }
-    deriving (Eq, Show, Generic, ToJSON)
-
 data OpenAIReqBody = OpenAIReqBody
     { model :: Text
-    , messages :: [Message]
+    , messages :: NonEmpty Message
     }
     deriving (Eq, Show, Generic, ToJSON)
 
@@ -102,7 +97,7 @@ instance FromJSON CompletionTokensDetails
 instance ToJSON CompletionTokensDetails
 
 instance LLM OpenAI where
-    call (OpenAI mbKey) prompt _ = do
+    chat (OpenAI mbKey) messages _ = do
         apiKey <- case mbKey of
             Nothing -> do
                 mKey <- lookupEnv "OPENAI_API_KEY"
@@ -111,7 +106,7 @@ instance LLM OpenAI where
                     Just apiKey -> return $ T.pack apiKey
             Just apiKey -> pure apiKey
         initRequest <- parseRequest "https://api.openai.com/v1/chat/completions"
-        let reqBody = OpenAIReqBody "gpt-4o-mini-2024-07-18" [Message "user" [prompt]]
+        let reqBody = OpenAIReqBody "gpt-4o-mini-2024-07-18" messages
         let request =
                 setRequestMethod
                     "POST"

@@ -1,14 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Langchain.TextSplitter.RecursiveCharacter (
-    recursiveCharacterSplitter,
-    -- RecursiveCharacterOptions (..),
-    -- defaultOptions,
+    splitText,
+    RecursiveCharacterOptions (..),
+    defaultOptions,
 )
 where
 
 import Data.Text (Text)
--- import qualified Data.Text as T
+import qualified Data.Text as T
 
 -- Options for the Recursive Character Splitter
 data RecursiveCharacterOptions = RecursiveCharacterOptions
@@ -29,8 +30,6 @@ defaultOptions =
         }
 
 -- Recursive character splitter function
-recursiveCharacterSplitter :: RecursiveCharacterOptions -> Text -> [Text]
-recursiveCharacterSplitter opts text = splitText opts text (separators opts)
-
-splitText :: RecursiveCharacterOptions -> Text -> [Text] -> [Text]
-splitText = undefined
+splitText :: RecursiveCharacterOptions -> Text -> [Text]
+splitText RecursiveCharacterOptions{..} txt =
+    foldr (\sep acc -> mconcat $ map (T.splitOn sep) acc) [txt] separators

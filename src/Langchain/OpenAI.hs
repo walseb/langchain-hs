@@ -1,7 +1,6 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Langchain.OpenAI (
@@ -10,9 +9,9 @@ module Langchain.OpenAI (
     OpenAIReqBody (..),
 ) where
 
-import Control.Monad (void)
 import Data.Aeson
-import qualified Data.ByteString.Lazy.Char8 as BSL
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -20,15 +19,23 @@ import GHC.Generics
 import Langchain.LLM
 import Network.HTTP.Simple
 import System.Environment (lookupEnv)
-import Data.List.NonEmpty (NonEmpty)
 
 newtype OpenAI = OpenAI {mbApiKey :: Maybe Text}
 
 data OpenAIReqBody = OpenAIReqBody
     { model :: Text
     , messages :: NonEmpty Message
+    , temperature :: Maybe Double
+    , max_tokens :: Maybe Integer
+    , top_p :: Maybe Double
+    , n :: Maybe Int
+    , stop :: Maybe [Text]
+    , stream :: Maybe Bool
     }
-    deriving (Eq, Show, Generic, ToJSON)
+    deriving (Eq, Show, Generic)
+
+instance ToJSON OpenAIReqBody where
+    toJSON = genericToJSON defaultOptions{omitNothingFields = True}
 
 -- Define the data types based on the JSON structure
 data OpenAIResponse = OpenAIResponse
@@ -97,41 +104,47 @@ instance FromJSON CompletionTokensDetails
 instance ToJSON CompletionTokensDetails
 
 instance LLM OpenAI where
-    chat (OpenAI mbKey) messages _ = do
+    call (OpenAI mbKey) prompt mbParams = do
+        let messages = Message User prompt Nothing NE.:| []
+        chat (OpenAI mbKey) messages mbParams
+
+    chat (OpenAI mbKey) messages mbParams = do
         apiKey <- case mbKey of
             Nothing -> do
                 mKey <- lookupEnv "OPENAI_API_KEY"
                 case mKey of
-                    Nothing -> error "api Key not found"
-                    Just apiKey -> return $ T.pack apiKey
-            Just apiKey -> pure apiKey
+                    Nothing -> error "API key not found"
+                    Just key -> pure $ T.pack key
+            Just key -> pure key
         initRequest <- parseRequest "https://api.openai.com/v1/chat/completions"
-        let reqBody = OpenAIReqBody "gpt-4o-mini-2024-07-18" messages
+        let reqBody =
+                OpenAIReqBody
+                    { model = "gpt-4o-mini-2024-07-18"
+                    , messages = messages
+                    , temperature = (\Params{..} -> temperature) =<< mbParams
+                    , max_tokens = maxTokens =<< mbParams
+                    , top_p = (\Params{..} -> topP) =<< mbParams
+                    , n = (\Params{..} -> n) =<< mbParams
+                    , stop = (\Params{..} -> stop) =<< mbParams
+                    , stream = Nothing
+                    }
         let request =
-                setRequestMethod
-                    "POST"
-                    ( setRequestBodyJSON
-                        reqBody
-                        ( setRequestHeaders
-                            [
-                                ( "Authorization"
-                                , "Bearer "
-                                    <> TE.encodeUtf8 apiKey
-                                )
-                            ]
-                            initRequest
-                        )
-                    )
+                setRequestMethod "POST"
+                    $ setRequestBodyJSON reqBody
+                    $ setRequestHeaders
+                        [ ("Authorization", "Bearer " <> TE.encodeUtf8 apiKey)
+                        , ("Content-Type", "application/json")
+                        ]
+                     initRequest
         resp <- httpLbs request
         let statusCode = getResponseStatusCode resp
         if statusCode >= 200 && statusCode <= 299
             then do
                 let respBody = getResponseBody resp
-                case eitherDecodeStrict (BSL.toStrict respBody) :: Either String OpenAIResponse of
-                    Left err -> do
-                        void $ error (show err)
-                        pure "Error"
-                    Right res -> do
-                        let Choice{message = Message_{content}} = head (choices res)
-                        pure content
-            else error $ "Something went wrong: " <> show (getResponseBody resp)
+                case eitherDecode respBody of
+                    Left err -> error $ "Decoding error: " <> err
+                    Right res ->
+                        case choices res of
+                            [] -> error "No choices in response"
+                            (choice : _) -> pure $ (\Message_{..} -> content) $ message choice
+            else error $ "HTTP error: " <> show statusCode <> " - " <> show (getResponseBody resp)

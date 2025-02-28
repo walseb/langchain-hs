@@ -2,36 +2,42 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Langchain.LLM
-    (Params (..), LLM (..), Message (..))
-    where
+module Langchain.LLM (
+    Params (..),
+    LLM (..),
+    Message (..),
+    Role (..),
+    defaultParams,
+)
+where
 
-import Data.Text (Text)
-import Data.List.NonEmpty (NonEmpty)
 import Data.Aeson
+import Data.List.NonEmpty (NonEmpty)
+import Data.Text (Text)
 import GHC.Generics
 
-data Params = Params {
-    tempreture :: Maybe Double
-  , maxTokens :: Maybe Integer
-  , topP :: Maybe Double
-  , n :: Maybe Int
-  , stop :: Maybe [Text]
- } deriving (Show, Eq)
+data Params = Params
+    { temperature :: Maybe Double
+    , maxTokens :: Maybe Integer
+    , topP :: Maybe Double
+    , n :: Maybe Int
+    , stop :: Maybe [Text]
+    , stream :: Maybe (Text -> IO (), IO ())
+    }
 
 data Role
     = System
     | User
-    | Assistant 
-    | Tool 
+    | Assistant
+    | Tool
     deriving (Eq)
 
 instance FromJSON Role where
-  parseJSON (String "system") = return System
-  parseJSON (String "user") = return User
-  parseJSON (String "assistant") = return Assistant
-  parseJSON (String "tool") = return Tool 
-  parseJSON x = error $ "Cannot parse json value for role " <> show x
+    parseJSON (String "system") = return System
+    parseJSON (String "user") = return User
+    parseJSON (String "assistant") = return Assistant
+    parseJSON (String "tool") = return Tool
+    parseJSON x = error $ "Cannot parse json value for role " <> show x
 
 instance ToJSON Role where
     toJSON System = String "system"
@@ -53,5 +59,19 @@ data Message = Message
     deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 class LLM m where
-   call :: m -> Text -> Maybe Params -> IO Text
-   chat :: m -> NonEmpty Message -> Maybe Params -> IO Text
+    call :: m -> Text -> Maybe Params -> IO Text
+    chat :: m -> NonEmpty Message -> Maybe Params -> IO Text
+
+-- Not every paramenter supports each LLM.
+-- This type is a unified parameter set of args that will be sent to
+-- corrosponding argument.
+defaultParams :: Params
+defaultParams =
+    Params
+        { temperature = Nothing
+        , maxTokens = Nothing
+        , topP = Nothing
+        , n = Nothing
+        , stop = Nothing
+        , stream = Nothing
+        }

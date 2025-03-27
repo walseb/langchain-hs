@@ -18,6 +18,9 @@ dependencies:
 - text
 - aeson
 - bytestring
+- containers
+- directory
+- pdf-toolbox-document
 - ollama-haskell
 
 ghc-options:

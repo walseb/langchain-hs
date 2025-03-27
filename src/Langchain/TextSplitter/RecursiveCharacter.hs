@@ -4,7 +4,7 @@
 module Langchain.TextSplitter.RecursiveCharacter
   ( splitText
   , RecursiveCharacterOptions (..)
-  , defaultOptions
+  , defaultRecursiveCharacterOptions 
   )
 where
 
@@ -20,8 +20,8 @@ data RecursiveCharacterOptions = RecursiveCharacterOptions
   }
 
 -- Default options
-defaultOptions :: RecursiveCharacterOptions
-defaultOptions =
+defaultRecursiveCharacterOptions :: RecursiveCharacterOptions
+defaultRecursiveCharacterOptions =
   RecursiveCharacterOptions
     { separators = ["\n\n", "\n", " ", ""]
     , chunkSize = 50

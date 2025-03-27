@@ -1,9 +1,6 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedStrings #-}
-
-module Langchain.OpenAI (
+module Langchain.LLM.OpenAI () where
+{-
+(
     OpenAI (..),
     Message (..),
     OpenAIReqBody (..),
@@ -148,3 +145,4 @@ instance LLM OpenAI where
                             [] -> error "No choices in response"
                             (choice : _) -> pure $ (\Message_{..} -> content) $ message choice
             else error $ "HTTP error: " <> show statusCode <> " - " <> show (getResponseBody resp)
+            -}

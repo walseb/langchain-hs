@@ -1,10 +1,6 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-
-module Langchain.DeepSeek (
+module Langchain.LLM.DeepSeek () where
+{-
+(
     DeepSeek (..),
     DeepSeekReqBody (..),
     listDeepseekModels,
@@ -183,3 +179,4 @@ listDeepseekModels = do
                     pure []
                 Right res -> pure $ map (\ListDeepSeekModels{id = id} -> id) res
         else error $ "Something went wrong: " <> show (getResponseBody resp)
+        -}

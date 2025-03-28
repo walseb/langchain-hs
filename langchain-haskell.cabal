@@ -29,6 +29,8 @@ library
       Langchain.DocumentLoader.Core
       Langchain.DocumentLoader.FileLoader
       Langchain.DocumentLoader.PdfLoader
+      Langchain.Embeddings.Core
+      Langchain.Embeddings.Ollama
       Langchain.LLM.Core
       Langchain.LLM.DeepSeek
       Langchain.LLM.Ollama

@@ -37,6 +37,8 @@ library
       Langchain.LLM.OpenAI
       Langchain.TextSplitter.Character
       Langchain.TextSplitter.RecursiveCharacter
+      Langchain.VectorStore.Core
+      Langchain.VectorStore.InMemory
   other-modules:
       Paths_langchain_haskell
   autogen-modules:

@@ -31,3 +31,6 @@ TODO:
    Use Ollama-haskell's image passing
  - https://python.langchain.com/docs/how_to/trim_messages/
     I want to provide some convience function for trimming message list.
+
+Deprioritizing Retriver for now.
+Will deprioritize PromptTemplate for now as well.

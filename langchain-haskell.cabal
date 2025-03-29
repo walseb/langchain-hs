@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Langchain
+      Langchain.Callback
       Langchain.DocumentLoader.Core
       Langchain.DocumentLoader.FileLoader
       Langchain.DocumentLoader.PdfLoader

@@ -5,7 +5,7 @@ cabal-version: 2.2
 -- see: https://github.com/sol/hpack
 
 name:           langchain-haskell
-version:        0.1.0.0
+version:        0.0.1.0
 description:    Build LLM-powered applications in Haskell.
 homepage:       https://github.com/tusharad/langchain-haskell#readme
 bug-reports:    https://github.com/tusharad/langchain-haskell/issues

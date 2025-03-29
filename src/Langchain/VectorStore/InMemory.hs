@@ -11,6 +11,8 @@ import Langchain.Embeddings.Core
 import Langchain.DocumentLoader.Core (Document)
 import Data.List (sortBy)
 import Data.Ord (comparing)
+import qualified Data.Map.Strict as Map
+import Data.Int (Int64)
 
 -- | Compute the dot product of two vectors.
 dotProduct :: [Float] -> [Float] -> Float
@@ -26,7 +28,7 @@ cosineSimilarity a b = dotProduct a b / (norm a * norm b)
 
 -- | Create an empty in-memory vector store with the given embedding model.
 emptyInMemoryVectorStore :: Embeddings m => m -> InMemory m
-emptyInMemoryVectorStore model = InMemory model []
+emptyInMemoryVectorStore model = InMemory model Map.empty
 
 -- | Create an in-memory vector store from a list of documents using the provided embedding model.
 fromDocuments :: Embeddings m => m -> [Document] -> IO (Either String (InMemory m))
@@ -36,7 +38,7 @@ fromDocuments model docs = do
 
 data Embeddings m => InMemory m = InMemory { 
     embeddingModel :: m
-  , store :: [(Document, [Float])]
+  , store :: Map.Map Int64 (Document, [Float])
   }
   deriving (Show, Eq)
 
@@ -46,10 +48,18 @@ instance Embeddings m => VectorStore (InMemory m) where
     eRes <- embedDocuments (embeddingModel inMem) docs
     case eRes of
       Left err -> pure $ Left err
-      Right floats -> 
-        return $ Right $ inMem {
-            store = store inMem <> (zip docs floats)
-        } 
+      Right floats -> do 
+        let currStore = store inMem
+            mbMaxKey = (Map.lookupMax currStore)
+            newStore = Map.fromList $ zip [(maybe 1 (\x -> fst x + 1) mbMaxKey)..] (zip docs floats)
+            newInMem = inMem { store = Map.union newStore currStore }
+        pure $ Right newInMem
+
+  delete inMem ids = do
+    let currStore = store inMem
+        newStore = foldl (\acc i -> Map.delete i acc) currStore ids
+        newInMem = inMem { store = newStore }
+    pure $ Right newInMem
 
   similaritySearch vs query k = do
     eQueryEmbedding <- embedQuery (embeddingModel vs) query
@@ -58,7 +68,7 @@ instance Embeddings m => VectorStore (InMemory m) where
       Right queryVec -> similaritySearchByVector vs queryVec k
 
   similaritySearchByVector vs queryVec k = do
-    let similarities = map (\(doc, vec) -> (doc, cosineSimilarity queryVec vec)) (store vs)
+    let similarities = map (\(doc, vec) -> (doc, cosineSimilarity queryVec vec)) (map snd $ Map.toList $ store vs)
         sorted = sortBy (comparing (negate . snd)) similarities  -- Sort in descending order
         topK = take k sorted
     return $ Right $ map fst topK

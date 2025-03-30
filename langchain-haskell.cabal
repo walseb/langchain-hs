@@ -36,6 +36,8 @@ library
       Langchain.LLM.DeepSeek
       Langchain.LLM.Ollama
       Langchain.LLM.OpenAI
+      Langchain.OutputParser.Core
+      Langchain.PromptTemplate
       Langchain.TextSplitter.Character
       Langchain.TextSplitter.RecursiveCharacter
       Langchain.VectorStore.Core

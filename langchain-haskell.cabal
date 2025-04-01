@@ -40,6 +40,8 @@ library
       Langchain.PromptTemplate
       Langchain.TextSplitter.Character
       Langchain.TextSplitter.RecursiveCharacter
+      Langchain.Tool.Core
+      Langchain.Tool.WikipediaTool
       Langchain.VectorStore.Core
       Langchain.VectorStore.InMemory
   other-modules:

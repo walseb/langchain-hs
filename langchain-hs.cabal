@@ -38,7 +38,8 @@ library
       Langchain.LLM.OpenAI
       Langchain.OutputParser.Core
       Langchain.PromptTemplate
-      Langchain.Retriver.Core
+      Langchain.Retriever.Core
+      Langchain.Retriever.MultiQueryRetriever
       Langchain.TextSplitter.Character
       Langchain.TextSplitter.RecursiveCharacter
       Langchain.Tool.Core

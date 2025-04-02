@@ -1,7 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Langchain.Memory.Core (BaseMemory (..), WindowBufferMemory (..)) where
+module Langchain.Memory.Core (
+      BaseMemory (..)
+    , WindowBufferMemory (..)
+    , trimChatMessage
+    , addAndTrim
+    , initialChatMessage
+) where
 
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
@@ -54,3 +60,16 @@ instance BaseMemory WindowBufferMemory where
           { windowBufferMessages =
               NE.singleton $ Message System "You are an AI model" defaultMessageData
           }
+
+-- | Trim the chat history to the last n messages.
+-- If n is larger than or equal to the current number of messages, returns the entire chat history.
+trimChatMessage :: Int -> ChatMessage -> ChatMessage
+trimChatMessage n msgs = NE.fromList $ drop (max 0 (NE.length msgs - n)) (NE.toList msgs)
+
+-- | Add a message to the chat history and trim to the last n messages.
+addAndTrim :: Int -> Message -> ChatMessage -> ChatMessage
+addAndTrim n msg msgs = trimChatMessage n (msgs `NE.append` NE.singleton msg)
+
+-- | Create an initial chat history with a system message.
+initialChatMessage :: Text -> ChatMessage
+initialChatMessage systemPrompt = NE.singleton $ Message System systemPrompt defaultMessageData

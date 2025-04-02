@@ -1,18 +1,18 @@
-cabal-version: 2.2
+cabal-version: 1.12
 
 -- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
-name:           langchain-haskell
+name:           langchain-hs
 version:        0.0.1.0
 description:    Build LLM-powered applications in Haskell.
-homepage:       https://github.com/tusharad/langchain-haskell#readme
-bug-reports:    https://github.com/tusharad/langchain-haskell/issues
+homepage:       https://github.com/tusharad/langchain-hs#readme
+bug-reports:    https://github.com/tusharad/langchain-hs/issues
 author:         tushar
 maintainer:     tusharadhatrao@gmail.com
 copyright:      2025 tushar
-license:        BSD-3-Clause
+license:        MIT
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
@@ -21,7 +21,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/tusharad/langchain-haskell
+  location: https://github.com/tusharad/langchain-hs
 
 library
   exposed-modules:
@@ -38,6 +38,7 @@ library
       Langchain.LLM.OpenAI
       Langchain.OutputParser.Core
       Langchain.PromptTemplate
+      Langchain.Retriver.Core
       Langchain.TextSplitter.Character
       Langchain.TextSplitter.RecursiveCharacter
       Langchain.Tool.Core
@@ -45,9 +46,7 @@ library
       Langchain.VectorStore.Core
       Langchain.VectorStore.InMemory
   other-modules:
-      Paths_langchain_haskell
-  autogen-modules:
-      Paths_langchain_haskell
+      Paths_langchain_hs
   hs-source-dirs:
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
@@ -63,13 +62,11 @@ library
     , text
   default-language: Haskell2010
 
-test-suite langchain-haskell-test
+test-suite langchain-hs-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Paths_langchain_haskell
-  autogen-modules:
-      Paths_langchain_haskell
+      Paths_langchain_hs
   hs-source-dirs:
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
@@ -80,7 +77,7 @@ test-suite langchain-haskell-test
     , containers
     , directory
     , http-conduit
-    , langchain-haskell
+    , langchain-hs
     , ollama-haskell
     , pdf-toolbox-document
     , text

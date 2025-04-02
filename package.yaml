@@ -1,7 +1,7 @@
-name:                langchain-haskell
+name:                langchain-hs
 version:             0.0.1.0
-github:              "tusharad/langchain-haskell"
-license:             BSD-3-Clause
+github:              "tusharad/langchain-hs"
+license:             MIT
 author:              "tushar"
 maintainer:          "tusharadhatrao@gmail.com"
 copyright:           "2025 tushar"
@@ -38,7 +38,7 @@ library:
   source-dirs: src
 
 tests:
-  langchain-haskell-test:
+  langchain-hs-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -46,4 +46,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - langchain-haskell
+    - langchain-hs

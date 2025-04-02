@@ -5,16 +5,7 @@
 --
 -- This module re-exports the core types and the Ollama implementation for
 -- convenient access.
-module Langchain
-  ( Params (..)
-  , StreamHandler (..)
-  , LLM (..)
-  , Message (..)
-  , Role (..)
-  , defaultParams
-  , defaultMessageData
-  , Ollama (..)
-  ) where
+module Langchain (module Export) where
 
-import Langchain.LLM.Core
-import Langchain.LLM.Ollama
+import Langchain.LLM.Core as Export
+import Langchain.LLM.Ollama as Export

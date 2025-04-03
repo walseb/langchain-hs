@@ -110,7 +110,6 @@ generateQueries model (QueryGenerationPrompt promptTemplate) query n includeOrig
           case parse response :: Either String CommaSeparatedList of
             Left err -> return $ Left $ "Failed to parse LLM response: " ++ err
             Right (CommaSeparatedList queries) -> do
-              print ("queries: " :: String, queries, result)
               let uniqueQueries = nub $ filter (not . T.null) queries
               return $
                 Right $

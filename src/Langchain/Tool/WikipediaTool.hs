@@ -68,8 +68,10 @@ instance Tool WikipediaTool where
 
   -- \^ Output is the combined page extracts.
   toolName _ = "Wikipedia"
+
   toolDescription _ =
     "A wrapper around Wikipedia. Useful for answering general questions about people, places, companies, facts, historical events, or other subjects. Input should be a search query."
+
   runTool tool q = searchWiki tool q
 
 -- | Perform a Wikipedia search and retrieve page extracts.

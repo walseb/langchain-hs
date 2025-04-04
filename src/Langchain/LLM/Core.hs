@@ -125,7 +125,7 @@ responses.
 class LLM m where
   -- | Invoke the language model with a single prompt.
   -- Returns either an error message or the generated text.
-  invoke :: m -> Text -> Maybe Params -> IO (Either String Text)
+  generate :: m -> Text -> Maybe Params -> IO (Either String Text)
 
   -- | Chat with the language model using a sequence of messages.
   -- Suitable for multi-turn conversations; returns either an error or the response.

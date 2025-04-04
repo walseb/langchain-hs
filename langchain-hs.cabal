@@ -43,6 +43,10 @@ library
       Langchain.PromptTemplate
       Langchain.Retriever.Core
       Langchain.Retriever.MultiQueryRetriever
+      Langchain.Runnable.Chain
+      Langchain.Runnable.ConversationChain
+      Langchain.Runnable.Core
+      Langchain.Runnable.Utils
       Langchain.TextSplitter.Character
       Langchain.TextSplitter.RecursiveCharacter
       Langchain.Tool.Core

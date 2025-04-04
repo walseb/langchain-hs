@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Langchain.Retriever.MultiQueryRetriever
   ( MultiQueryRetriever (..)
@@ -13,6 +14,7 @@ import Langchain.LLM.Core (LLM (..))
 import Langchain.OutputParser.Core (CommaSeparatedList (..), OutputParser (..))
 import Langchain.PromptTemplate (PromptTemplate (..), renderPrompt)
 import Langchain.Retriever.Core (Retriever (..))
+import qualified Langchain.Runnable.Core as Run
 
 import Data.Either (rights)
 import Data.List (nub)
@@ -103,7 +105,7 @@ generateQueries model (QueryGenerationPrompt promptTemplate) query n includeOrig
   case renderPrompt promptTemplate vars of
     Left err -> return $ Left err
     Right prompt -> do
-      result <- invoke model prompt Nothing
+      result <- generate model prompt Nothing
       case result of
         Left err -> return $ Left err
         Right response -> do
@@ -168,3 +170,9 @@ instance (Retriever a, LLM m) => Retriever (MultiQueryRetriever a m) where
  ghci> documents
     Right [Document {pageContent = "Tushar is 25 years old.", metadata = fromList []}]
  -}
+
+instance (Retriever a, LLM m) => Run.Runnable (MultiQueryRetriever a m) where
+  type RunnableInput (MultiQueryRetriever a m) = Text
+  type RunnableOutput (MultiQueryRetriever a m) = [Document]
+  
+  invoke r query = _get_relevant_documents r query

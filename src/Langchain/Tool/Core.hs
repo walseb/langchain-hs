@@ -1,4 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Langchain.Tool.Core
   ( Tool(..)
@@ -20,3 +23,4 @@ class Tool a where
   toolDescription :: a -> Text
   -- | Executes the tool with the given input and returns the output in IO.
   runTool :: a -> Input a -> IO (Output a)
+

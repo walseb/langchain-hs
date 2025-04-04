@@ -28,6 +28,7 @@ import qualified Data.Text as T
 import GHC.Generics
 import Langchain.Tool.Core
 import Network.HTTP.Simple
+import Langchain.Runnable.Core (Runnable(..))
 
 -- | Data type representing the Wikipedia tool.
 data WikipediaTool = WikipediaTool
@@ -192,3 +193,11 @@ instance FromJSON Page where
     Page
       <$> v .: "title"
       <*> v .: "extract"
+
+instance Runnable WikipediaTool where
+
+    type RunnableInput WikipediaTool = Text
+    type RunnableOutput WikipediaTool = Text
+
+    --TODO: runTool should return an Either
+    invoke tool input = fmap Right $ runTool tool input

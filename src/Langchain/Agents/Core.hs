@@ -1,8 +1,3 @@
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 {- |
 Module      : Langchain.Agents.Core
 Description : Implementation of agents that use LLMs to determine actions
@@ -13,6 +8,13 @@ Maintainer  : tusharadhatrao@gmail.com
 This module provides the core functionality for agents in LangChain.
 Agents use language models to determine which actions to take and in what order.
 -}
+
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
+
 module Langchain.Agents.Core
   ( AgentAction (..)
   , AgentFinish (..)
@@ -38,6 +40,7 @@ import Langchain.LLM.Core (Message (Message), Role (..), defaultMessageData)
 import Langchain.Memory.Core (BaseMemory (..))
 import Langchain.PromptTemplate (PromptTemplate)
 import Langchain.Tool.Core (Tool (..))
+import qualified Langchain.Runnable.Core as Run
 
 data AgentAction = AgentAction
   { actionToolName :: Text
@@ -159,3 +162,16 @@ runAgentExecutor AgentExecutor {..} input = do
       if returnIntermediateSteps
         then return $ Right $ Just a
         else return $ Right Nothing
+
+-- | Make Agent a Runnable
+instance (Agent a, BaseMemory m) => Run.Runnable (AgentExecutor a m) where
+  type RunnableInput (AgentExecutor a m) = Text
+  type RunnableOutput (AgentExecutor a m) = AgentFinish
+  
+  invoke AgentExecutor{..} input = do
+    let initialState = AgentState
+          { agentMemory = executorMemory
+          , agentToolResults = []
+          , agentSteps = []
+          }
+    runAgent executor initialState input

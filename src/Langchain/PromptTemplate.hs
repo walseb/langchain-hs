@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Langchain.PromptTemplate
   ( PromptTemplate (..)
@@ -11,6 +12,7 @@ module Langchain.PromptTemplate
 import qualified Data.Map.Strict as HM
 import Data.Text (Text)
 import qualified Data.Text as T
+import Langchain.Runnable.Core (Runnable (..))
 
 -- TODO: Add Mechanism for custom example selector
 
@@ -80,3 +82,9 @@ interpolate vars template = go template
                       rest <- go (T.drop 1 after''')
                       return $ before <> val <> rest
                     Nothing -> Left $ "Missing variable: " <> T.unpack key'
+
+instance Runnable PromptTemplate where
+  type RunnableInput PromptTemplate = HM.Map Text Text
+  type RunnableOutput PromptTemplate = Text
+
+  invoke template variables = pure $ renderPrompt template variables

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Langchain.Memory.Core (
@@ -12,6 +13,7 @@ module Langchain.Memory.Core (
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import Langchain.LLM.Core (ChatMessage, Message (..), Role (..), defaultMessageData)
+import Langchain.Runnable.Core
 
 class BaseMemory m where
   messages :: m -> IO (Either String ChatMessage)
@@ -73,3 +75,9 @@ addAndTrim n msg msgs = trimChatMessage n (msgs `NE.append` NE.singleton msg)
 -- | Create an initial chat history with a system message.
 initialChatMessage :: Text -> ChatMessage
 initialChatMessage systemPrompt = NE.singleton $ Message System systemPrompt defaultMessageData
+
+instance Runnable WindowBufferMemory where
+  type RunnableInput WindowBufferMemory = Text
+  type RunnableOutput WindowBufferMemory = WindowBufferMemory
+  
+  invoke memory input = addUserMessage memory input

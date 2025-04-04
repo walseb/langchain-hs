@@ -1,6 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 
 {- | This module provides an implementation of the 'LLM' typeclass for the Ollama
 language model backend.
@@ -14,6 +15,7 @@ import qualified Data.Ollama.Generate as OllamaGenerate
 import Data.Text (Text)
 import Langchain.Callback (Callback, Event (..))
 import Langchain.LLM.Core
+import qualified Langchain.Runnable.Core as Run
 
 -- | A wrapper around the model name for the Ollama language model.
 data Ollama = Ollama
@@ -32,7 +34,7 @@ Note that the 'Params' argument is currently ignored in all methods.
 instance LLM Ollama where
   -- \| Invoke the Ollama model with a single prompt.
   -- Returns either an error or the generated text. Ignores 'Params'.
-  invoke (Ollama model cbs) prompt _ = do
+  generate (Ollama model cbs) prompt _ = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
       OllamaGenerate.generate
@@ -103,3 +105,10 @@ toOllamaMessages = NonEmpty.map $ \Message {..} ->
     toOllamaRole System = OllamaChat.System
     toOllamaRole Assistant = OllamaChat.Assistant
     toOllamaRole Tool = OllamaChat.Tool
+
+instance Run.Runnable Ollama where
+  type RunnableInput Ollama = Text
+  type RunnableOutput Ollama = Text
+ 
+  -- TODO: need to figure out a way to pass mbParams
+  invoke model input = generate model input Nothing

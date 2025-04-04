@@ -22,10 +22,6 @@ import qualified Langchain.LLM.Ollama as Ollama
 -- Import the Wikipedia tool.
 import Langchain.Tool.WikipediaTool (WikipediaTool(..), defaultWikipediaTool)
 
---------------------------------------------------------------------------------
--- Main Function: Using OllamaLLM and the Wikipedia Tool
---------------------------------------------------------------------------------
-
 main :: IO ()
 main = do
   -- Create an instance of Ollama LLM with a model name and an empty callback list.

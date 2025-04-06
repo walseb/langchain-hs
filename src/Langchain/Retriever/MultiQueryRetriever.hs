@@ -7,11 +7,13 @@ module Langchain.Retriever.MultiQueryRetriever
   , QueryGenerationPrompt (..)
   , defaultQueryGenerationPrompt
   , newMultiQueryRetrieverWithConfig 
+  , defaultMultiQueryRetrieverConfig 
+  , generateQueries
   ) where
 
 import Langchain.DocumentLoader.Core (Document)
 import Langchain.LLM.Core (LLM (..))
-import Langchain.OutputParser.Core (CommaSeparatedList (..), OutputParser (..))
+import Langchain.OutputParser.Core (NumberSeparatedList (..), OutputParser (..))
 import Langchain.PromptTemplate (PromptTemplate (..), renderPrompt)
 import Langchain.Retriever.Core (Retriever (..))
 import qualified Langchain.Runnable.Core as Run
@@ -40,7 +42,8 @@ defaultQueryGenerationPrompt =
             , ""
             , "Please generate {num_queries} different versions of this query that will help the user find the most relevant information."
             , "The queries should be different but related to the original query."
-            , "Return these queries as a comma-separated list."
+            , "Return these queries in the following format: 1. query 1 \n 2. query 2 \n 3. query 3"
+            , "Only return queries and nothing else"
             ]
       }
 
@@ -69,7 +72,7 @@ defaultMultiQueryRetrieverConfig =
 {- | MultiQueryRetriever generates multiple queries from a single input query,
 retrieves documents for each generated query, and combines the results.
 -}
-data MultiQueryRetriever a m = MultiQueryRetriever
+data (Retriever a, LLM m) => MultiQueryRetriever a m = MultiQueryRetriever
   { retriever :: a
   -- ^ The base retriever
   , llm :: m
@@ -79,7 +82,7 @@ data MultiQueryRetriever a m = MultiQueryRetriever
   }
 
 -- | Create a new MultiQueryRetriever with default configuration
-newMultiQueryRetriever :: a -> m -> MultiQueryRetriever a m
+newMultiQueryRetriever :: (Retriever a, LLM m) => a -> m -> MultiQueryRetriever a m
 newMultiQueryRetriever r l =
   MultiQueryRetriever
     { retriever = r
@@ -88,7 +91,7 @@ newMultiQueryRetriever r l =
     }
 
 -- | Create a new MultiQueryRetriever with custom configuration
-newMultiQueryRetrieverWithConfig ::
+newMultiQueryRetrieverWithConfig :: (Retriever a, LLM m) =>
   a -> m -> MultiQueryRetrieverConfig -> MultiQueryRetriever a m
 newMultiQueryRetrieverWithConfig r l c =
   MultiQueryRetriever
@@ -109,9 +112,9 @@ generateQueries model (QueryGenerationPrompt promptTemplate) query n includeOrig
       case result of
         Left err -> return $ Left err
         Right response -> do
-          case parse response :: Either String CommaSeparatedList of
+          case parse response :: Either String NumberSeparatedList of
             Left err -> return $ Left $ "Failed to parse LLM response: " ++ err
-            Right (CommaSeparatedList queries) -> do
+            Right (NumberSeparatedList queries) -> do
               let uniqueQueries = nub $ filter (not . T.null) queries
               return $
                 Right $

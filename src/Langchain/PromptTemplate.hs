@@ -43,24 +43,22 @@ data FewShotPromptTemplate = FewShotPromptTemplate
   -- ^ Separator between formatted examples
   , fsSuffix :: Text
   -- ^ Text after the examples, with placeholders
-  , fsInputVariables :: [Text]
-  -- ^ Expected variables in the suffix
   }
   deriving (Show, Eq)
 
 {- | Render a few-shot prompt template with the given input variables.
 Returns either an error message if interpolation fails or the fully rendered prompt.
 -}
-renderFewShotPrompt :: FewShotPromptTemplate -> HM.Map Text Text -> Either String Text
-renderFewShotPrompt FewShotPromptTemplate {..} inputVars = do
+renderFewShotPrompt :: FewShotPromptTemplate -> Either String Text
+renderFewShotPrompt FewShotPromptTemplate {..} = do
   -- Format each example using the example template
-  formattedExamples <- mapM (\ex -> interpolate ex fsExampleTemplate) fsExamples
+  formattedExamples <- mapM 
+                        (\ex -> interpolate ex fsExampleTemplate) 
+                         fsExamples
   -- Join the formatted examples with the separator
   let examplesText = T.intercalate fsExampleSeparator formattedExamples
-  -- Format the suffix with the input variables
-  formattedSuffix <- interpolate inputVars fsSuffix
   -- Combine prefix, examples, and suffix
-  return $ fsPrefix <> examplesText <> formattedSuffix
+  return $ fsPrefix <> examplesText <> fsSuffix
 
 {- | Interpolate variables into a template string.
 Placeholders are of the form {key}, where key is a sequence of alphanumeric characters and underscores.
@@ -88,3 +86,11 @@ instance Runnable PromptTemplate where
   type RunnableOutput PromptTemplate = Text
 
   invoke template variables = pure $ renderPrompt template variables
+
+{-
+instance Runnable FewShotPromptTemplate where
+  type RunnableInput FewShotPromptTemplate = Maybe [Text]
+  type RunnableOutput FewShotPromptTemplate = Text
+
+  invoke t m = pure $ renderFewShotPrompt t m
+-}

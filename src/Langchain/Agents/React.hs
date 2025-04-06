@@ -19,6 +19,7 @@ module Langchain.Agents.React
   , createReactAgent
   ) where
 
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -27,7 +28,6 @@ import Langchain.LLM.Core
 import Langchain.Memory.Core
 import Langchain.OutputParser.Core
 import Langchain.PromptTemplate
-import qualified Data.List.NonEmpty as NE
 import Langchain.Tool.Core
 
 newtype ReactAgentOutputParser = ReactAgentOutputParser AgentStep
@@ -51,7 +51,8 @@ parseReactOutput text
   | T.isInfixOf "Action:" text && T.isInfixOf "Action Input:" text =
       -- Extract action and action input
       let actionName = extractAfter "Action:" $ T.takeWhile (/= '\n') $ T.dropWhile (/= 'A') text
-          actionInput_ = extractAfter "Action Input:" $ T.takeWhile (/= '\n') $ snd $ T.breakOn "Action Input:" text
+          actionInput_ =
+            extractAfter "Action Input:" $ T.takeWhile (/= '\n') $ snd $ T.breakOn "Action Input:" text
        in Right $
             ReactAgentOutputParser $
               Continue $
@@ -99,14 +100,6 @@ createReactAgent llm tools = do
             , "... (this Thought/Action/Action Input/Observation can repeat N times)"
             , "Thought: I now know the final answer"
             , "Final Answer: the final answer to the original input question"
-            , ""
-            , "Begin!"
-            , ""
-            , "Previous conversation history:"
-            , "{chat_history}"
-            , ""
-            , "Question: {input}"
-            , "Thought:"
             ]
   return $
     Right $
@@ -117,8 +110,7 @@ createReactAgent llm tools = do
         }
 
 instance (LLM llm) => Agent (ReactAgent llm) where
-
-  planNextAction ReactAgent{..} state = do
+  planNextAction ReactAgent {..} state = do
     let mem = agentMemory state
     msgResult <- messages mem
     case msgResult of
@@ -126,15 +118,12 @@ instance (LLM llm) => Agent (ReactAgent llm) where
       Right msgs -> do
         -- Format the tools descriptions
         let toolDescs = formatToolDescriptions reactTools
-            toolNames = formatToolNames reactTools
-
+            userQuery = getLastUserInput msgs
         -- Build the prompt variables
         let promptVars =
               Map.fromList
                 [ ("tools_description", toolDescs)
-                , ("tool_names", toolNames)
-                , ("chat_history", formatChatHistory msgs)
-                , ("input", getLastUserInput msgs)
+                , ("tool_names", formatToolNames reactTools)
                 ]
 
         -- Render the prompt
@@ -142,10 +131,17 @@ instance (LLM llm) => Agent (ReactAgent llm) where
           Left err -> return $ Left err
           Right renderedPrompt -> do
             -- Call the LLM
+            let m =
+                  ( msgs
+                      `NE.append` NE.fromList
+                        [ (Message System renderedPrompt defaultMessageData)
+                        , (Message User userQuery defaultMessageData)
+                        ]
+                  )
             response <-
               chat
                 reactLLM
-                (msgs `NE.append` NE.singleton (Message System renderedPrompt defaultMessageData))
+                m
                 Nothing
             case response of
               Left err -> return $ Left err
@@ -155,31 +151,24 @@ instance (LLM llm) => Agent (ReactAgent llm) where
                   Left err -> return $ Left $ "Failed to parse LLM output: " <> err
                   Right (ReactAgentOutputParser step) -> return $ Right step
 
-  agentPrompt ReactAgent{..} = pure reactPromptTemplate 
-  agentTools ReactAgent{..} = pure reactTools
+  agentPrompt ReactAgent {..} = pure reactPromptTemplate
+  agentTools ReactAgent {..} = pure reactTools
 
 -- | Format tool descriptions as a string
 formatToolDescriptions :: [AnyTool] -> Text
 formatToolDescriptions tools = T.intercalate "\n\n" $ map formatTool tools
   where
-    formatTool (AnyTool tool _ _) = 
+    formatTool (AnyTool tool _ _) =
       T.concat ["Tool: ", toolName tool, "\nDescription: ", toolDescription tool]
 
 -- | Format tool names as a comma-separated string
 formatToolNames :: [AnyTool] -> Text
 formatToolNames tools = T.intercalate ", " $ map (\(AnyTool tool _ _) -> toolName tool) tools
 
--- | Format chat history as a string
-formatChatHistory :: ChatMessage -> Text
-formatChatHistory msgs = T.intercalate "\n" $ map formatMessage $ NE.toList msgs
-  where
-    formatMessage Message{..} = 
-      T.concat [T.pack $ show role, ": ", content]
-
 -- | Get the last user input from the chat history
 getLastUserInput :: ChatMessage -> Text
-getLastUserInput msgs = 
+getLastUserInput msgs =
   let userMsgs = filter (\m -> role m == User) $ NE.toList msgs
-  in if null userMsgs
-     then ""
-     else content $ last userMsgs
+   in if null userMsgs
+        then ""
+        else content $ last userMsgs

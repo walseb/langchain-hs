@@ -34,6 +34,7 @@ Note that the 'Params' argument is currently ignored in all methods.
 instance LLM Ollama where
   -- \| Invoke the Ollama model with a single prompt.
   -- Returns either an error or the generated text. Ignores 'Params'.
+  -- TODO: Pass down params to Ollama generate
   generate (Ollama model cbs) prompt _ = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
@@ -53,6 +54,7 @@ instance LLM Ollama where
 
   -- \| Chat with the Ollama model using a sequence of messages.
   -- Returns either an error or the response text. Ignores 'Params' for now.
+  -- TODO: Pass down params to Ollama chat
   chat (Ollama model cbs) messages _ = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
@@ -107,8 +109,8 @@ toOllamaMessages = NonEmpty.map $ \Message {..} ->
     toOllamaRole Tool = OllamaChat.Tool
 
 instance Run.Runnable Ollama where
-  type RunnableInput Ollama = Text
+  type RunnableInput Ollama = ChatMessage
   type RunnableOutput Ollama = Text
- 
+
   -- TODO: need to figure out a way to pass mbParams
-  invoke model input = generate model input Nothing
+  invoke model input = chat model input Nothing

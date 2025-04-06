@@ -1,14 +1,14 @@
-module Langchain.Callback (
-    Event (..)
-    , Callback
-    , stdOutCallback
-) where
+module Langchain.Callback
+  ( Event (..)
+  , Callback
+  , stdOutCallback
+  ) where
 
-data Event = 
-    LLMStart 
+data Event
+  = LLMStart
   | LLMEnd
   | LLMError String
-    deriving (Show, Eq)
+  deriving (Show, Eq)
 
 type Callback = Event -> IO ()
 

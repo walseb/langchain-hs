@@ -1,18 +1,18 @@
 {-# LANGUAGE RecordWildCards #-}
-module Langchain.VectorStore.InMemory 
- (
-    InMemory(..)
-  , fromDocuments 
+
+module Langchain.VectorStore.InMemory
+  ( InMemory (..)
+  , fromDocuments
   , emptyInMemoryVectorStore
   ) where
 
-import Langchain.VectorStore.Core 
-import Langchain.Embeddings.Core
-import Langchain.DocumentLoader.Core (Document)
-import Data.List (sortBy)
-import Data.Ord (comparing)
-import qualified Data.Map.Strict as Map
 import Data.Int (Int64)
+import Data.List (sortBy)
+import qualified Data.Map.Strict as Map
+import Data.Ord (comparing)
+import Langchain.DocumentLoader.Core (Document)
+import Langchain.Embeddings.Core
+import Langchain.VectorStore.Core
 
 -- | Compute the dot product of two vectors.
 dotProduct :: [Float] -> [Float] -> Float
@@ -20,7 +20,7 @@ dotProduct a b = sum $ zipWith (*) a b
 
 -- | Compute the Euclidean norm of a vector.
 norm :: [Float] -> Float
-norm a = sqrt $ sum $ map (^(2 :: Int)) a
+norm a = sqrt $ sum $ map (^ (2 :: Int)) a
 
 -- | Compute the cosine similarity between two vectors.
 cosineSimilarity :: [Float] -> [Float] -> Float
@@ -36,29 +36,28 @@ fromDocuments model docs = do
   let vs = emptyInMemoryVectorStore model
   addDocuments vs docs
 
-data Embeddings m => InMemory m = InMemory { 
-    embeddingModel :: m
+data Embeddings m => InMemory m = InMemory
+  { embeddingModel :: m
   , store :: Map.Map Int64 (Document, [Float])
   }
   deriving (Show, Eq)
 
 instance Embeddings m => VectorStore (InMemory m) where
-  
   addDocuments inMem docs = do
     eRes <- embedDocuments (embeddingModel inMem) docs
     case eRes of
       Left err -> pure $ Left err
-      Right floats -> do 
+      Right floats -> do
         let currStore = store inMem
             mbMaxKey = (Map.lookupMax currStore)
-            newStore = Map.fromList $ zip [(maybe 1 (\x -> fst x + 1) mbMaxKey)..] (zip docs floats)
-            newInMem = inMem { store = Map.union newStore currStore }
+            newStore = Map.fromList $ zip [(maybe 1 (\x -> fst x + 1) mbMaxKey) ..] (zip docs floats)
+            newInMem = inMem {store = Map.union newStore currStore}
         pure $ Right newInMem
 
   delete inMem ids = do
     let currStore = store inMem
         newStore = foldl (\acc i -> Map.delete i acc) currStore ids
-        newInMem = inMem { store = newStore }
+        newInMem = inMem {store = newStore}
     pure $ Right newInMem
 
   similaritySearch vs query k = do
@@ -68,9 +67,13 @@ instance Embeddings m => VectorStore (InMemory m) where
       Right queryVec -> similaritySearchByVector vs queryVec k
 
   similaritySearchByVector vs queryVec k = do
-    let similarities = map (\(doc, vec) -> (doc, cosineSimilarity queryVec vec)) (map snd $ Map.toList $ store vs)
-        sorted = sortBy (comparing (negate . snd)) similarities  -- Sort in descending order
+    let similarities =
+          map
+            (\(doc, vec) -> (doc, cosineSimilarity queryVec vec))
+            (map snd $ Map.toList $ store vs)
+        sorted = sortBy (comparing (negate . snd)) similarities -- Sort in descending order
         topK = take k sorted
+    print ("topK", topK)
     return $ Right $ map fst topK
 
 {-

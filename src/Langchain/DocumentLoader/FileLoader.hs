@@ -9,7 +9,7 @@ import Data.Text (pack)
 import Data.Map (fromList)
 import Data.Aeson 
 import System.Directory (doesFileExist)
-import Langchain.TextSplitter.RecursiveCharacter
+import Langchain.TextSplitter.Character
 
 -- | A loader for text files.
 data FileLoader = FileLoader FilePath
@@ -31,6 +31,6 @@ instance BaseLoader FileLoader where
         if exists
             then do
                 content <- readFile path
-                return $ Right $ splitText defaultRecursiveCharacterOptions (pack content)
+                return $ Right $ splitText defaultCharacterSplitterOps (pack content)
             else
                 return $ Left $ "File not found: " ++ path

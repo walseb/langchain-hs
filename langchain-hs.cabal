@@ -35,9 +35,7 @@ library
       Langchain.Embeddings.Core
       Langchain.Embeddings.Ollama
       Langchain.LLM.Core
-      Langchain.LLM.DeepSeek
       Langchain.LLM.Ollama
-      Langchain.LLM.OpenAI
       Langchain.Memory.Core
       Langchain.OutputParser.Core
       Langchain.PromptTemplate
@@ -48,7 +46,6 @@ library
       Langchain.Runnable.Core
       Langchain.Runnable.Utils
       Langchain.TextSplitter.Character
-      Langchain.TextSplitter.RecursiveCharacter
       Langchain.Tool.Core
       Langchain.Tool.WikipediaTool
       Langchain.VectorStore.Core

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{-|
+{- |
 Module      : Langchain.DocumentLoader.PdfLoader
 Description : A PDF loader that extracts documents from PDF files.
 Copyright   : (C) 2025
@@ -22,12 +22,13 @@ import Data.Aeson
 import Data.Map (fromList)
 import Data.Text (pack)
 import Langchain.DocumentLoader.Core
-import Langchain.TextSplitter.RecursiveCharacter
+import Langchain.TextSplitter.Character
 import Pdf.Document hiding (Document)
 import System.Directory (doesFileExist)
 
 -- TODO: Need some error handling for this function
-{-|
+
+{- |
 An internal function
 Reads a PDF file and extracts a list of 'Document's, one per page.
 
@@ -59,7 +60,7 @@ readPdf fPath = do
         )
       $ zip textList [1 .. count]
 
-{-|
+{- |
 A loader for PDF files.
 
 The 'PdfLoader' data type encapsulates a 'FilePath' pointing to a PDF document.
@@ -69,17 +70,16 @@ splitting PDF content.
 data PdfLoader = PdfLoader FilePath
 
 instance BaseLoader PdfLoader where
- 
-  {-|
-  Loads all pages from the PDF file specified by the 'PdfLoader'.
-
-  This function first checks whether the file exists. If it does, it uses
-  'readPdf' to extract the content of each page as a separate 'Document'. If
-  the file is not found, an appropriate error message is returned.
-
-  @param loader A 'PdfLoader' containing the file path to the PDF.
-  @return An IO action yielding either an error message or a list of 'Document's.
-  -}
+  -- \|
+  --  Loads all pages from the PDF file specified by the 'PdfLoader'.
+  --
+  --  This function first checks whether the file exists. If it does, it uses
+  --  'readPdf' to extract the content of each page as a separate 'Document'. If
+  --  the file is not found, an appropriate error message is returned.
+  --
+  --  @param loader A 'PdfLoader' containing the file path to the PDF.
+  --  @return An IO action yielding either an error message or a list of 'Document's.
+  --
   load (PdfLoader path) = do
     exists <- doesFileExist path
     if exists
@@ -89,22 +89,22 @@ instance BaseLoader PdfLoader where
       else
         return $ Left $ "File not found: " ++ path
 
-  {-|
-  Loads the raw content of the PDF file and splits it using a recursive character splitter.
-
-  This method reads the entire file as text (without parsing its PDF structure) and applies
-  'splitText' with default recursive character options to divide the text into chunks.
-  This approach is useful when only a simple text split is required rather than structured
-  page extraction.
-
-  @param loader A 'PdfLoader' containing the file path to the PDF.
-  @return An IO action yielding either an error message or a list of text chunks.
-  -}
+  -- \|
+  --  Loads the raw content of the PDF file and splits it using a recursive character splitter.
+  --
+  --  This method reads the entire file as text (without parsing its PDF structure) and applies
+  --  'splitText' with default recursive character options to divide the text into chunks.
+  --  This approach is useful when only a simple text split is required rather than structured
+  --  page extraction.
+  --
+  --  @param loader A 'PdfLoader' containing the file path to the PDF.
+  --  @return An IO action yielding either an error message or a list of text chunks.
+  --
   loadAndSplit (PdfLoader path) = do
     exists <- doesFileExist path
     if exists
       then do
         content <- readFile path
-        return $ Right $ splitText defaultRecursiveCharacterOptions (pack content)
+        return $ Right $ splitText defaultCharacterSplitterOps (pack content)
       else
         return $ Left $ "File not found: " ++ path

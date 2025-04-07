@@ -4,6 +4,9 @@ module Langchain.VectorStore.InMemory
   ( InMemory (..)
   , fromDocuments
   , emptyInMemoryVectorStore
+  , norm
+  , dotProduct
+  , cosineSimilarity 
   ) where
 
 import Data.Int (Int64)
@@ -73,7 +76,6 @@ instance Embeddings m => VectorStore (InMemory m) where
             (map snd $ Map.toList $ store vs)
         sorted = sortBy (comparing (negate . snd)) similarities -- Sort in descending order
         topK = take k sorted
-    print ("topK", topK)
     return $ Right $ map fst topK
 
 {-

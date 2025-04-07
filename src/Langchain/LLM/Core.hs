@@ -15,6 +15,7 @@ module Langchain.LLM.Core
   , Role (..)
   , defaultMessageData
   , ChatMessage
+  , MessageData (..)
   ) where
 
 import Data.Aeson

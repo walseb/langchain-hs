@@ -71,6 +71,15 @@ test-suite langchain-hs-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Test.Langchain.DocumentLoader.Core
+      Test.Langchain.Embeddings.Core
+      Test.Langchain.LLM.Core
+      Test.Langchain.LLM.Ollama
+      Test.Langchain.Memory.Core
+      Test.Langchain.OutputParser.Core
+      Test.Langchain.PromptTemplate
+      Test.Langchain.TextSplitter.Character
+      Test.Langchain.VectorStore.Core
       Paths_langchain_hs
   hs-source-dirs:
       test
@@ -81,9 +90,13 @@ test-suite langchain-hs-test
     , bytestring
     , containers
     , directory
+    , filepath
     , http-conduit
     , langchain-hs
     , ollama-haskell
     , pdf-toolbox-document
+    , tasty
+    , tasty-hunit
+    , temporary
     , text
   default-language: Haskell2010

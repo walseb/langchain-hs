@@ -47,3 +47,8 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - langchain-hs
+    - text
+    - tasty
+    - tasty-hunit
+    - filepath
+    - temporary

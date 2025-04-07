@@ -19,6 +19,11 @@ jobs:
     steps:
     - name: Copy repo into actions 
       uses: actions/checkout@v3
-    
+ 
+    - name: Installing ollama
+      uses: pydantic/ollama-action@v3
+      with:
+        model: llama3.2:latest
+
     - name: install dependancies, build and test stack project.
       uses: freckle/stack-action@v5

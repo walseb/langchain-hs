@@ -13,10 +13,13 @@ Maintainer  : tusharadhatrao@gmail.com
 This module provides implementation of ReAct agent.
 -}
 module Langchain.Agents.React
-  ( ReactAgentOutputParser
+  ( ReactAgentOutputParser (..)
   , parseReactOutput
   , ReactAgent (..)
   , createReactAgent
+  , formatToolDescriptions
+  , formatToolNames
+  , getLastUserInput
   ) where
 
 import qualified Data.List.NonEmpty as NE

@@ -13,7 +13,7 @@ module Langchain.Runnable.Chain
   , branch
   , buildSequence
   , appendSequence 
-  , (|>)
+  , (|>>)
   ) where
 
 import Data.List (find)
@@ -128,11 +128,11 @@ appendSequence RSNil r = RSCons r RSNil
 appendSequence (RSCons r1 rs) r2 = RSCons r1 (appendSequence rs r2)
 
 -- | Operator version of chain for more readable composition
-(|>) ::
+(|>>) ::
   (Runnable r1, Runnable r2, RunnableOutput r1 ~ RunnableInput r2) =>
   r1 ->
   r2 ->
   RunnableInput r1 ->
   IO (Either String (RunnableOutput r2))
-(|>) = chain
-infix 4 |>
+(|>>) = chain
+infix 4 |>>

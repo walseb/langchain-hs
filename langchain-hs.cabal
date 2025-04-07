@@ -71,6 +71,8 @@ test-suite langchain-hs-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Test.Langchain.Agent.Core
+      Test.Langchain.Agent.ReactAgent
       Test.Langchain.DocumentLoader.Core
       Test.Langchain.Embeddings.Core
       Test.Langchain.LLM.Core
@@ -78,7 +80,13 @@ test-suite langchain-hs-test
       Test.Langchain.Memory.Core
       Test.Langchain.OutputParser.Core
       Test.Langchain.PromptTemplate
+      Test.Langchain.Retriever.Core
+      Test.Langchain.Runnable.Chains
+      Test.Langchain.Runnable.ConversationChains
+      Test.Langchain.Runnable.Core
+      Test.Langchain.Runnable.Utils
       Test.Langchain.TextSplitter.Character
+      Test.Langchain.Tool.Core
       Test.Langchain.VectorStore.Core
       Paths_langchain_hs
   hs-source-dirs:

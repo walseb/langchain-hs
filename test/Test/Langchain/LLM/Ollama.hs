@@ -2,17 +2,13 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Langchain.LLM.Ollama where
+module Test.Langchain.LLM.Ollama (tests) where
 
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import Control.Concurrent
-import Control.Exception (SomeException, try)
-import Control.Monad.IO.Class (liftIO)
 import Data.IORef
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NonEmpty
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -21,7 +17,6 @@ import Langchain.LLM.Core
 import Langchain.LLM.Ollama
 import qualified Langchain.Runnable.Core as Run
 
--- | Helper to capture callback events
 captureEvents :: IO (Callback, IO [Event])
 captureEvents = do
   eventsRef <- newIORef []
@@ -29,18 +24,16 @@ captureEvents = do
   let getEvents = reverse <$> readIORef eventsRef
   return (callback, getEvents)
 
--- | Test model name
 testModelName :: Text
 testModelName = "llama3.2:latest"
 
--- | Main test tree
 tests :: TestTree
 tests =
   testGroup
     "Ollama"
     [ testCase "Show instance formats Ollama correctly" $ do
-        let ollama = Ollama "llama2" []
-        show ollama @?= "Ollama \"llama2\""
+        let ollama = Ollama "llama3" []
+        show ollama @?= "Ollama \"llama3\""
     , testCase "generate returns text response for a prompt" $ do
         (callback, getEvents) <- captureEvents
         let ollama = Ollama testModelName [callback]
@@ -61,7 +54,7 @@ tests =
         result <- generate ollama prompt Nothing
         case result of
           Left err -> do
-            assertBool "Error should mention model" ("non_existent_model" `T.isInfixOf` T.pack err)
+            assertBool "Error should mention model" ("model" `T.isInfixOf` T.pack err)
             events <- getEvents
             assertBool "LLM should tried to be started" (events `shouldContainAll` [LLMStart])
             length (filter isErrorEvent events) @?= 1

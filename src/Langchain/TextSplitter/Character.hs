@@ -25,4 +25,7 @@ defaultCharacterSplitterOps =
 
 splitText :: CharacterSplitterOps -> Text -> [Text]
 splitText CharacterSplitterOps {..} txt =
-  mconcat $ map (T.chunksOf chunkSize) (T.splitOn separator txt)
+  mconcat $
+    map
+      (T.chunksOf chunkSize . T.strip)
+      (if T.null separator then [txt] else T.splitOn separator txt )

@@ -3,8 +3,40 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 
-{- | This module provides an implementation of the 'LLM' typeclass for the Ollama
-language model backend.
+{- |
+Module      : Langchain.LLM.Ollama
+Description : Ollama integration for LangChain Haskell
+Copyright   : (c) 2025 Tushar Adhatrao
+License     : MIT
+Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
+Stability   : experimental
+
+Ollama implementation of LangChain's LLM interface , supporting:
+
+- Text generation
+- Chat interactions
+- Streaming responses
+- Callback integration
+
+Example usage:
+
+@
+-- Create Ollama configuration
+ollamaLLM = Ollama "llama3" [stdOutCallback]
+
+-- Generate text
+response <- generate ollamaLLM "Explain Haskell monads" Nothing
+-- Right "Monads in Haskell..."
+
+-- Chat interaction
+let messages = UserMessage "What's the capital of France?" :| []
+chatResponse <- chat ollamaLLM messages Nothing
+-- Right "The capital of France is Paris."
+
+-- Streaming
+streamHandler = StreamHandler print (putStrLn "Done")
+streamResult <- stream ollamaLLM messages streamHandler Nothing
+@
 -}
 module Langchain.LLM.Ollama (Ollama (..)) where
 
@@ -17,24 +49,47 @@ import Langchain.Callback (Callback, Event (..))
 import Langchain.LLM.Core
 import qualified Langchain.Runnable.Core as Run
 
--- | A wrapper around the model name for the Ollama language model.
+{- | Ollama LLM configuration
+Contains:
+
+- Model name (e.g., "llama3:latest")
+- Callbacks for event tracking
+
+Example:
+
+>>> Ollama "nomic-embed" [logCallback]
+Ollama "nomic-embed"
+-}
 data Ollama = Ollama
   { modelName :: Text
   -- ^ The name of the Ollama model
   , callbacks :: [Callback]
-  -- ^ Callbacks for streaming responses
+  -- ^ Event handlers for LLM operations
   }
 
 instance Show Ollama where
   show (Ollama modelName _) = "Ollama " ++ show modelName
 
-{- | Implementation of the 'LLM' typeclass for the Ollama backend.
-Note that the 'Params' argument is currently ignored in all methods.
+{- | Ollama implementation of the LLM typeclass
+Note: Params argument is currently ignored (see TODOs).
+
+Example instance usage:
+
+@
+-- Generate text with error handling
+case generate ollamaLLM "Hello" Nothing of
+  Left err -> putStrLn $ "Error: " ++ err
+  Right res -> putStrLn res
+@
 -}
 instance LLM Ollama where
-  -- \| Invoke the Ollama model with a single prompt.
-  -- Returns either an error or the generated text. Ignores 'Params'.
-  -- TODO: Pass down params to Ollama generate
+  -- \| Generate text from a prompt
+  --  Returns Left on API errors, Right on success.
+  --
+  --  Example:
+  --  >>> generate (Ollama "llama3.2" []) "Hello" Nothing
+  --  Right "Hello! How can I assist you today?"
+  --
   generate (Ollama model cbs) prompt _ = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
@@ -52,9 +107,14 @@ instance LLM Ollama where
         mapM_ (\cb -> cb LLMEnd) cbs
         return $ Right (OllamaGenerate.response_ res)
 
-  -- \| Chat with the Ollama model using a sequence of messages.
-  -- Returns either an error or the response text. Ignores 'Params' for now.
-  -- TODO: Pass down params to Ollama chat
+  -- \| Chat interaction with message history.
+  --  Uses Ollama's chat API for multi-turn conversations.
+  --
+  --  Example:
+  --  >>> let msgs = UserMessage "Hi" :| [AssistantMessage "Hello!"]
+  --  >>> chat (Ollama "llama3" []) msgs Nothing
+  --  Right "How are you today?"
+  --
   chat (Ollama model cbs) messages _ = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
@@ -74,8 +134,14 @@ instance LLM Ollama where
     where
       chatRespToText resp = maybe "" OllamaChat.content (OllamaChat.message resp)
 
-  -- \| Stream responses from the Ollama model for a sequence of messages.
-  -- Uses 'StreamHandler' callbacks for real-time processing. Ignores 'Params' for now.
+  -- \| Streaming response handling.
+  --  Processes tokens in real-time via StreamHandler.
+  --
+  --  Example:
+  --  >>> let handler = StreamHandler (putStr . ("Token: " ++)) (putStrLn "Complete")
+  --  >>> stream (Ollama "llama3" []) messages handler Nothing
+  --  Token: H Token: i Complete
+  --
   stream (Ollama model_ cbs) messages StreamHandler {onToken, onComplete} _ = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
@@ -95,9 +161,15 @@ instance LLM Ollama where
     where
       chatRespToText OllamaChat.ChatResponse {..} = maybe "" OllamaChat.content message
 
-{- | Convert a list of Langchain 'Message's to Ollama 'Message's.
-| Currently ignores the 'messageData' field, as it is not supported by Ollama.
-TODO: Receive tool_calls from Ollama
+{- | Convert LangChain messages to Ollama format.
+Current limitations:
+- Ignores 'messageData' field
+- No tool call support (see TODO)
+
+Example conversion:
+>>> let msg = Message System "You are an assistant" defaultMessageData
+>>> toOllamaMessages (msg :| [])
+NonEmpty [OllamaChat.Message System "You are an assistant" Nothing Nothing]
 -}
 toOllamaMessages :: NonEmpty Message -> NonEmpty OllamaChat.Message
 toOllamaMessages = NonEmpty.map $ \Message {..} ->
@@ -113,4 +185,23 @@ instance Run.Runnable Ollama where
   type RunnableOutput Ollama = Text
 
   -- TODO: need to figure out a way to pass mbParams
+  -- \| Runnable interface implementation.
+  --  Currently delegates to 'chat' method with default parameters.
+  --
   invoke model input = chat model input Nothing
+
+{- $examples
+Test case patterns:
+1. Basic generation
+   >>> generate (Ollama "test-model" []) "Hello" Nothing
+   Right "Mock response"
+
+2. Error handling
+   >>> generate (Ollama "invalid-model" []) "Test" Nothing
+   Left "API request failed"
+
+3. Streaming interaction
+   >>> let handler = StreamHandler print (pure ())
+   >>> stream (Ollama "llama3" []) (UserMessage "Hi" :| []) handler Nothing
+   Right ()
+-}

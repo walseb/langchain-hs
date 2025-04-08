@@ -2,10 +2,38 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{- |
+Module:      Langchain.PromptTemplate
+Copyright:   (c) 2025 Tushar Adhatrao
+License:     MIT
+Maintainer:  Tushar Adhatrao <tusharadhatrao@gmail.com>
+Stability:   experimental
+
+This module provides types and functions for working with prompt templates in Langchain.
+Prompt templates are used to structure inputs for language models, allowing for dynamic
+insertion of variables into predefined text formats. They are essential for creating
+flexible and reusable prompts that can be customized based on input data.
+
+The main types are:
+
+* 'PromptTemplate': A simple template with placeholders for variables.
+* 'FewShotPromptTemplate': A template that includes few-shot examples for better context,
+  useful in scenarios like few-shot learning.
+
+These types are designed to be compatible with the Langchain Python library's prompt template
+functionality: [Langchain PromptTemplate](https://python.langchain.com/docs/concepts/prompt_templates/).
+
+== Examples
+
+See the documentation for 'renderPrompt' and 'renderFewShotPrompt' for usage examples.
+-}
 module Langchain.PromptTemplate
-  ( PromptTemplate (..)
-  , renderPrompt
+  ( -- * Core Types
+    PromptTemplate (..)
   , FewShotPromptTemplate (..)
+
+    -- * Rendering Functions
+  , renderPrompt
   , renderFewShotPrompt
   ) where
 
@@ -27,11 +55,33 @@ newtype PromptTemplate = PromptTemplate
 
 {- | Render a prompt template with the given variables.
 Returns either an error message if a variable is missing or the rendered template.
+
+=== Using 'renderPrompt'
+
+To render a prompt template with variables:
+
+@
+let template = PromptTemplate "Hello, {name}! Welcome to {place}."
+vars = HM.fromList [("name", "Alice"), ("place", "Wonderland")]
+result <- renderPrompt template vars
+-- Result: Right "Hello, Alice! Welcome to Wonderland."
+@
+
+If a variable is missing:
+
+@
+let vars = HM.fromList [("name", "Alice")]
+result <- renderPrompt template vars
+-- Result: Left "Missing variable: place"
+@
 -}
 renderPrompt :: PromptTemplate -> HM.Map Text Text -> Either String Text
 renderPrompt (PromptTemplate template) vars = interpolate vars template
 
--- | Represents a few-shot prompt template with examples.
+{- | Represents a few-shot prompt template with examples.
+This type allows for creating prompts that include example inputs and outputs,
+which can be useful for few-shot learning scenarios.
+-}
 data FewShotPromptTemplate = FewShotPromptTemplate
   { fsPrefix :: Text
   -- ^ Text before the examples
@@ -48,13 +98,33 @@ data FewShotPromptTemplate = FewShotPromptTemplate
 
 {- | Render a few-shot prompt template with the given input variables.
 Returns either an error message if interpolation fails or the fully rendered prompt.
+
+=== Using 'renderFewShotPrompt'
+
+To render a few-shot prompt template:
+
+@
+let fewShotTemplate = FewShotPromptTemplate
+      { fsPrefix = "Examples of {type}:\n"
+      , fsExamples =
+          [ HM.fromList [("input", "Hello"), ("output", "Bonjour")]
+          , HM.fromList [("input", "Goodbye"), ("output", "Au revoir")]
+          ]
+      , fsExampleTemplate = "Input: {input}\nOutput: {output}\n"
+      , fsExampleSeparator = "\n"
+      , fsSuffix = "Now translate: {query}"
+      }
+result <- renderFewShotPrompt fewShotTemplate
+-- Result: Right "Examples of {type}:\nInput: Hello\nOutput: Bonjour\n\nInput: Goodbye\nOutput: Au revoir\nNow translate: {query}"
+@
 -}
 renderFewShotPrompt :: FewShotPromptTemplate -> Either String Text
 renderFewShotPrompt FewShotPromptTemplate {..} = do
   -- Format each example using the example template
-  formattedExamples <- mapM 
-                        (\ex -> interpolate ex fsExampleTemplate) 
-                         fsExamples
+  formattedExamples <-
+    mapM
+      (\ex -> interpolate ex fsExampleTemplate)
+      fsExamples
   -- Join the formatted examples with the separator
   let examplesText = T.intercalate fsExampleSeparator formattedExamples
   -- Combine prefix, examples, and suffix

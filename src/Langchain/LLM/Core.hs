@@ -3,19 +3,43 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-{- | This module defines the core types and typeclasses for the Langchain library,
-providing a standardized interface for interacting with language models.
+{- |
+Module:      Langchain.LLM.Core
+Copyright:   (c) 2025 Tushar Adhatrao
+License:     MIT
+Maintainer:  Tushar Adhatrao <tusharadhatrao@gmail.com>
+Stability:   experimental
+
+This module provides the core types and typeclasses for the Langchain library in Haskell,
+which is designed to facilitate interaction with language models (LLMs). It defines a standardized
+interface that allows different LLM implementations to be used interchangeably, promoting code reuse
+and modularity.
+
+The main components include:
+
+* The 'LLM' typeclass, which defines the interface for language models.
+* Data types such as 'Params' for configuring model invocations, 'Message' for conversation messages,
+  and 'StreamHandler' for handling streaming responses.
+* Default values like 'defaultParams' and 'defaultMessageData' for convenience.
+
+This module is intended to be used as the foundation for building applications that interact with LLMs,
+providing a consistent API across different model implementations.
 -}
 module Langchain.LLM.Core
-  ( Params (..)
-  , StreamHandler (..)
-  , LLM (..)
-  , defaultParams
+  ( -- * LLM Typeclass
+    LLM (..)
+
+    -- * Parameters
   , Message (..)
   , Role (..)
-  , defaultMessageData
   , ChatMessage
   , MessageData (..)
+  , Params (..)
+  , StreamHandler (..)
+
+    -- * Default Values
+  , defaultParams
+  , defaultMessageData
   ) where
 
 import Data.Aeson
@@ -24,27 +48,45 @@ import Data.Text (Text)
 import GHC.Generics
 
 {- | Parameters for configuring language model invocations.
-These parameters control aspects such as the randomness, length, and stopping
-conditions of the generated output.
+These parameters control aspects such as randomness, length, and stopping conditions of generated output.
+This type corresponds to standard parameters in Python Langchain:
 https://python.langchain.com/docs/concepts/chat_models/#standard-parameters
+
+Example usage:
+
+@
+myParams :: Params
+myParams = defaultParams
+  { temperature = Just 0.7
+  , maxTokens = Just 100
+  }
+@
 -}
 data Params = Params
   { temperature :: Maybe Double
-  -- ^ Sampling temperature, controls randomness (higher = more creative)
+  -- ^ Sampling temperature. Higher values increase randomness (creativity), while lower values make output more focused.
   , maxTokens :: Maybe Integer
-  -- ^ Maximum number of tokens to generate
-  , topP :: Maybe Double
-  -- ^ Nucleus sampling parameter (top-p probability mass)
+  , --- ^ Maximum number of tokens to generate in the response.
+    topP :: Maybe Double
+  -- ^ Nucleus sampling parameter. Considers tokens whose cumulative probability mass is at least @topP@.
   , n :: Maybe Int
-  -- ^ Number of responses to generate
+  -- ^ Number of responses to generate (e.g., for sampling multiple outputs).
   , stop :: Maybe [Text]
-  -- ^ Sequences where generation should stop
+  -- ^ Sequences where generation should stop (e.g., ["\n"] stops at newlines).
   }
   deriving (Show, Eq)
 
 {- | Callbacks for handling streaming responses from a language model.
 This allows real-time processing of tokens as they are generated and an action
 upon completion.
+
+@
+printHandler :: StreamHandler
+printHandler = StreamHandler
+  { onToken = putStrLn . ("Token: " ++)
+  , onComplete = putStrLn "Streaming complete"
+  }
+@
 -}
 data StreamHandler = StreamHandler
   { onToken :: Text -> IO ()
@@ -68,6 +110,15 @@ data Role
 {- | Represents a message in a conversation, including the sender's role, content,
 and additional metadata.
 https://python.langchain.com/docs/concepts/messages/
+
+@
+userMsg :: Message
+userMsg = Message
+  { role = User
+  , content = "Explain functional programming"
+  , messageData = defaultMessageData
+  }
+@
 -}
 data Message = Message
   { role :: Role
@@ -107,6 +158,7 @@ instance FromJSON MessageData where
       <$> v .:? "name"
       <*> v .:? "tool_calls"
 
+-- | Type alias for NonEmpty Message
 type ChatMessage = NonEmpty Message
 
 {- | Default message data with all fields set to Nothing.
@@ -122,15 +174,53 @@ defaultMessageData =
 {- | Typeclass defining the interface for language models.
 This provides methods for invoking the model, chatting with it, and streaming
 responses.
+
+@
+data TestLLM = TestLLM
+  { responseText :: Text
+  , shouldSucceed :: Bool
+  }
+
+instance LLM TestLLM where
+  generate m _ _ = pure $ if shouldSucceed m
+    then Right (responseText m)
+    else Left "Test error"
+@
+
+
+@
+ollamaLLM = Ollama "llama3.2:latest" [stdOutCallback]
+response <- generate ollamaLLM "What is Haskell?" Nothing
+@
 -}
 class LLM m where
   -- | Invoke the language model with a single prompt.
-  -- Returns either an error message or the generated text.
-  generate :: m -> Text -> Maybe Params -> IO (Either String Text)
+  --        Suitable for simple queries; returns either an error or generated text.
+
+  {- === Using 'generate'
+  To invoke an LLM with a single prompt:
+  
+  @
+  let myLLM = ... -- assume this is an instance of LLM
+  result <- generate myLLM "What is the meaning of life?" Nothing
+  case result of
+    Left err -> putStrLn $ "Error: " ++ err
+    Right response -> putStrLn response
+  @
+
+  -}
+  generate :: m -- ^ The type of the language model instance.
+    -> Text -- ^ The prompt to send to the model.
+    -> Maybe Params -- ^ Optional configuration parameters.
+    -> IO (Either String Text)
 
   -- | Chat with the language model using a sequence of messages.
   -- Suitable for multi-turn conversations; returns either an error or the response.
-  chat :: m -> ChatMessage -> Maybe Params -> IO (Either String Text)
+  --
+  chat :: m -- ^ The type of the language model instance.
+    -> ChatMessage -- ^ A non-empty list of messages to send to the model.
+    -> Maybe Params -- ^ Optional configuration parameters.
+    -> IO (Either String Text) -- ^ The result of the chat, either an error or the response text.
 
   -- | Stream responses from the language model for a sequence of messages.
   -- Uses callbacks to process tokens in real-time; returns either an error or unit.
@@ -138,6 +228,8 @@ class LLM m where
 
 {- | Default parameters with all fields set to Nothing.
 Use this when no specific configuration is needed for the language model.
+
+>>> generate myLLM "Hello" (Just defaultParams)
 -}
 defaultParams :: Params
 defaultParams =

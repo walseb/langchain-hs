@@ -5,12 +5,24 @@
 
 {- |
 Module      : Langchain.Agents.React
-Description : Implementation of ReAct agent
+Description : Implementation of ReAct agent combining reasoning and action
 Copyright   : (c) 2025 Tushar Adhatrao
 License     : MIT
-Maintainer  : tusharadhatrao@gmail.com
+Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
 
-This module provides implementation of ReAct agent.
+Implements the ReAct pattern where the agent alternates between:
+
+1. Reasoning (generating thoughts)
+2. Acting (executing tools)
+
+Example agent interaction:
+
+> agent <- createReactAgent llm [wikipediaTool, calculatorTool]
+> result <- runAgentExecutor executor "What's the population of Paris?"
+> -- Agent might:
+> -- 1. Use Wikipedia tool to find current population data
+> -- 2. Use calculator tool to verify numbers
+> -- 3. Return final answer
 -}
 module Langchain.Agents.React
   ( ReactAgentOutputParser (..)
@@ -33,6 +45,21 @@ import Langchain.OutputParser.Core
 import Langchain.PromptTemplate
 import Langchain.Tool.Core
 
+{- |
+Output parser for ReAct agent responses
+Handles two primary formats:
+
+1. Final answers containing "Final Answer:"
+2. Action requests with "Action:" and "Action Input:"
+
+Example parsing:
+
+> parseReactOutput "Final Answer: 42"
+> -- Right (Finish ...)
+>
+> parseReactOutput "Action: calculator\nAction Input: 5+3"
+> -- Right (Continue ...)
+-}
 newtype ReactAgentOutputParser = ReactAgentOutputParser AgentStep
 
 instance OutputParser ReactAgentOutputParser where
@@ -66,6 +93,22 @@ parseReactOutput text
                   }
   | otherwise = Left $ "Could not parse agent output: " <> T.unpack text
 
+{- |
+Core ReAct agent configuration.
+Contains:
+
+- LLM for reasoning
+- Available tools
+- Prompt template for interaction
+
+Example creation:
+
+> agent <- createReactAgent
+>   openAIGPT
+>   [ AnyTool wikipediaTool
+>   , AnyTool calculatorTool
+>   ]
+-}
 data (LLM llm) => ReactAgent llm = ReactAgent
   { reactLLM :: llm
   , reactTools :: [AnyTool]
@@ -80,7 +123,21 @@ extractAfter marker text =
         then ""
         else T.strip $ T.dropWhile (/= ':') afterMarker
 
--- | Creates a React agent (Reasoning and Acting) with the given LLM, tools, and memory
+{- |
+Creates a ReAct agent with standard prompt structure
+The prompt instructs the LLM to:
+
+1. List available tools
+2. Follow thought-action-observation pattern
+3. Provide final answers
+
+Example prompt excerpt:
+
+> "Use the following format:
+> Thought: ...
+> Action: [tool_name]
+> Action Input: ..."
+-}
 createReactAgent ::
   (LLM llm) =>
   llm ->
@@ -113,6 +170,17 @@ createReactAgent llm tools = do
         }
 
 instance (LLM llm) => Agent (ReactAgent llm) where
+  -- \|
+  --  Core reasoning loop implementing ReAct pattern
+  --
+  --  1. Retrieve chat history
+  --  2. Format tool information
+  --  3. Construct reasoning prompt
+  --  4. Execute LLM call
+  --  5. Parse response into action/answer
+  --
+  --  Uses depth-first planning with backtracking
+  --
   planNextAction ReactAgent {..} state = do
     let mem = agentMemory state
     msgResult <- messages mem
@@ -157,18 +225,33 @@ instance (LLM llm) => Agent (ReactAgent llm) where
   agentPrompt ReactAgent {..} = pure reactPromptTemplate
   agentTools ReactAgent {..} = pure reactTools
 
--- | Format tool descriptions as a string
+{- |
+Formats tool descriptions for LLM consumption
+Creates a list like:
+
+> "Tool: wikipedia
+>  Description: Search Wikipedia..."
+-}
 formatToolDescriptions :: [AnyTool] -> Text
 formatToolDescriptions tools = T.intercalate "\n\n" $ map formatTool tools
   where
     formatTool (AnyTool tool _ _) =
       T.concat ["Tool: ", toolName tool, "\nDescription: ", toolDescription tool]
 
--- | Format tool names as a comma-separated string
+{- |
+Creates comma-separated tool names for prompt inclusion
+Example output: "wikipedia, calculator, weather"
+-}
 formatToolNames :: [AnyTool] -> Text
 formatToolNames tools = T.intercalate ", " $ map (\(AnyTool tool _ _) -> toolName tool) tools
 
--- | Get the last user input from the chat history
+{- |
+Extracts latest user query from chat history
+Handles cases where:
+
+- Multiple user messages exist
+- No user input found
+-}
 getLastUserInput :: ChatMessage -> Text
 getLastUserInput msgs =
   let userMsgs = filter (\m -> role m == User) $ NE.toList msgs

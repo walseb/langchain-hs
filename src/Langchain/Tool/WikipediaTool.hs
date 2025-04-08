@@ -5,12 +5,25 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{- |
+Module      : Langchain.Tool.WikipediaTool
+Description : Tool for extracting wikipedia content.
+Copyright   : (c) 2025 Tushar Adhatrao
+License     : MIT
+Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
+Stability   : experimental
+-}
 module Langchain.Tool.WikipediaTool
-  ( defaultTopK
-  , WikipediaTool (..)
+  ( -- * Configuration
+    WikipediaTool (..)
+  , defaultWikipediaTool
+
+    -- * Parameters
+  , defaultTopK
   , defaultDocMaxChars
   , defaultLanguageCode
-  , defaultWikipediaTool
+
+    -- * Internal types
   , SearchQuery (..)
   , SearchResponse (..)
   , Page (..)
@@ -26,11 +39,22 @@ import qualified Data.Map as M
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics
+import Langchain.Runnable.Core (Runnable (..))
 import Langchain.Tool.Core
 import Network.HTTP.Simple
-import Langchain.Runnable.Core (Runnable(..))
 
--- | Data type representing the Wikipedia tool.
+{- |
+Wikipedia search tool configuration
+The tool uses Wikipedia's API to perform searches and retrieve page extracts.
+
+Example configuration:
+
+> customTool = WikipediaTool
+>   { topK = 3
+>   , docMaxChars = 1000
+>   , languageCode = "es"
+>   }
+-}
 data WikipediaTool = WikipediaTool
   { topK :: Int
   -- ^ Number of Wikipedia pages to include in the result.
@@ -41,17 +65,30 @@ data WikipediaTool = WikipediaTool
   }
   deriving (Eq, Show)
 
--- | Default values for the Wikipedia tool.
+-- | Default value for top K
 defaultTopK :: Int
 defaultTopK = 2
 
+-- | Default value for max chars
 defaultDocMaxChars :: Int
 defaultDocMaxChars = 2000
 
+-- | Default language
 defaultLanguageCode :: Text
 defaultLanguageCode = "en"
 
--- | Create a new Wikipedia tool with default values.
+{- |
+Wikipedia search tool configuration
+The tool uses Wikipedia's API to perform searches and retrieve page extracts.
+
+Example configuration:
+
+> customTool = WikipediaTool
+>   { topK = 3
+>   , docMaxChars = 1000
+>   , languageCode = "es"
+>   }
+-}
 defaultWikipediaTool :: WikipediaTool
 defaultWikipediaTool =
   WikipediaTool
@@ -64,15 +101,46 @@ defaultWikipediaTool =
 instance Tool WikipediaTool where
   type Input WikipediaTool = Text
 
-  -- \^ Input is a search query.
+  -- \^ Natural language search query (e.g., "Quantum computing")
+
   type Output WikipediaTool = Text
 
-  -- \^ Output is the combined page extracts.
+  -- \^ Concatenated page extracts with separators
+
+  -- \|
+  --  Returns "Wikipedia" as the tool identifier
+  --
+  --  >>> toolName (undefined :: WikipediaTool)
+  --  "Wikipedia"
+  --
   toolName _ = "Wikipedia"
 
+  -- \|
+  --  Provides a description for LLM agents:
+  --
+  --  >>> toolDescription (undefined :: WikipediaTool)
+  --  "A wrapper around Wikipedia. Useful for answering..."
+  --
   toolDescription _ =
     "A wrapper around Wikipedia. Useful for answering general questions about people, places, companies, facts, historical events, or other subjects. Input should be a search query."
 
+  -- \|
+  --  Executes Wikipedia search and content retrieval.
+  --  Handles API calls and response parsing, returning concatenated extracts.
+  --
+  --  Example flow:
+  --
+  --  1. Perform search query
+  --  2. Retrieve top K page IDs
+  --  3. Fetch and truncate page content
+  --  4. Combine results with separators
+  --
+  --  Throws exceptions on:
+  --
+  --  - API request failures
+  --  - JSON parsing errors
+  --  - Missing page content
+  --
   runTool tool q = searchWiki tool q
 
 -- | Perform a Wikipedia search and retrieve page extracts.
@@ -140,6 +208,7 @@ data SearchResponse = SearchResponse
   }
   deriving (Show, Generic, FromJSON)
 
+-- | Type for list of search result
 data SearchQuery = SearchQuery
   { search :: [SearchResult]
   }
@@ -150,6 +219,7 @@ instance FromJSON SearchQuery where
     SearchQuery
       <$> v .: "search"
 
+-- | Result of SearchResult
 data SearchResult = SearchResult
   { ns :: Int
   , title_ :: Text
@@ -172,16 +242,19 @@ instance FromJSON SearchResult where
       <*> v .: "snippet"
       <*> v .: "timestamp"
 
+-- | Wikipedia response
 data PageResponse = PageResponse
   { query :: Pages
   }
   deriving (Generic, Eq, Show, FromJSON)
 
+-- | Collection of Wikipedia pages, where key is page id
 data Pages = Pages
   { pages :: Map String Page
   }
   deriving (Generic, Eq, Show, FromJSON)
 
+-- | Represents wikipedia page
 data Page = Page
   { title :: Text
   , extract :: Text
@@ -194,10 +267,21 @@ instance FromJSON Page where
       <$> v .: "title"
       <*> v .: "extract"
 
+{- |
+Implements Runnable compatibility layer
+Note: The current implementation returns 'Right' values only,
+though the type signature allows for future error handling.
+
+Example usage:
+
+> response <- invoke defaultWikipediaTool "Artificial intelligence"
+> case response of
+>   Right content -> putStrLn content
+>   Left err -> print err
+-}
 instance Runnable WikipediaTool where
+  type RunnableInput WikipediaTool = Text
+  type RunnableOutput WikipediaTool = Text
 
-    type RunnableInput WikipediaTool = Text
-    type RunnableOutput WikipediaTool = Text
-
-    --TODO: runTool should return an Either
-    invoke tool input = fmap Right $ runTool tool input
+  -- TODO: runTool should return an Either
+  invoke tool input = fmap Right $ runTool tool input

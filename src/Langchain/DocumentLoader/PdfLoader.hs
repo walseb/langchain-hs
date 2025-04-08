@@ -3,9 +3,9 @@
 {- |
 Module      : Langchain.DocumentLoader.PdfLoader
 Description : A PDF loader that extracts documents from PDF files.
-Copyright   : (C) 2025
+Copyright   : (C) 2025 Tushar Adhatrao
 License     : MIT
-Maintainer  : tusharadhatrao@gmail.com
+Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
 Stability   : experimental
 
 This module provides a loader for PDF files by implementing the

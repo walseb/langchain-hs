@@ -35,6 +35,7 @@ library
       Langchain.Embeddings.Ollama
       Langchain.LLM.Core
       Langchain.LLM.Ollama
+      Langchain.LLM.OpenAI
       Langchain.Memory.Core
       Langchain.OutputParser.Core
       Langchain.PromptTemplate
@@ -62,6 +63,7 @@ library
     , containers
     , directory
     , http-conduit
+    , http-types
     , ollama-haskell
     , pdf-toolbox-document
     , scalpel
@@ -101,6 +103,7 @@ test-suite langchain-hs-test
     , directory
     , filepath
     , http-conduit
+    , http-types
     , langchain-hs
     , ollama-haskell
     , pdf-toolbox-document

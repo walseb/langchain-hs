@@ -23,6 +23,7 @@ dependencies:
 - pdf-toolbox-document
 - ollama-haskell
 - scalpel
+- http-types
 
 ghc-options:
 - -Wall

@@ -1,42 +1,88 @@
-# langchain-haskell
+# 🦜️🔗LangChain Haskell
 
-Langchain is a Haskell library designed to facilitate interaction with Language Model APIs such as OpenAI and Ollama. 
-It provides abstractions over different language model APIs, allowing users to easily call these APIs 
-and process their responses.
+⚡ Building applications with LLMs through composability in Haskell! ⚡
 
-## Usage
+## Introduction
 
-To use the Langchain library, you will need to:
+LangChain Haskell is a robust port of the original [LangChain](https://github.com/langchain-ai/langchain) library, bringing its powerful natural language processing capabilities to the Haskell ecosystem. This library enables developers to build applications powered by large language models (LLMs) with ease and flexibility.
 
-1. Import the necessary modules.
-2. Use the `call` function from the `LLM` typeclass to interact with the language model.
+## Features
 
-Here's a basic example:
+- **LLM Integration**: Seamlessly interact with various language models, including OpenAI's GPT series and others.
+- **Prompt Templates**: Create and manage dynamic prompts for different tasks.
+- **Memory Management**: Implement conversational memory to maintain context across interactions.
+- **Agents and Tools**: Develop agents that can utilize tools to perform complex tasks.
+- **Document Loaders**: Load and process documents from various sources for use in your applications.
+
+## Current Supported Providers
+
+  - Ollama
+  - More to come...
+
+## Installation
+
+To use LangChain Haskell in your project, add it to your package dependencies. 
+If you're using Stack, include it in your `package.yaml`:
+
+```yaml
+dependencies:
+  - base >= 4.7 && < 5
+  - langchain-hs
+```
+Then, run the build command for your respective build tool to fetch and compile the dependency.
+
+## Quickstart
+
+Here's a simple example demonstrating how to use LangChain Haskell to interact with an LLM:
 
 ```haskell
-import Langchain.LLM
-import Langchain.OpenAI
-import Data.Text (Text)
-import qualified Data.List.NonEmpty as NonEmpty
+{-# LANGUAGE OverloadedStrings #-}
+module Main (main) where
+
+import Langchain.LLM.Ollama
+import Langchain.LLM.Core
+import Langchain.PromptTemplate
+import Langchain.Callback
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 
 main :: IO ()
-main = do
-    let openAI = OpenAI (Just <your-api-key-here>)
-    let messages = NonEmpty.fromList [
-            Message User "Why is sky blue?"
-        ]
-    response <- call openAI messages Nothing
-    putStrLn (show response)
+main = do 
+  let ollamaLLM = Ollama "llama3.2" [stdOutCallback]
+      prompt = PromptTemplate "Translate the following English text to French: {text}"
+      input = Map.fromList [("text", "Hello, how are you?")]
+      
+  case renderPrompt prompt input of
+    Left e -> putStrLn $ "Error: " ++ e
+    Right renderedPrompt -> do
+      eRes <- generate ollamaLLM renderedPrompt Nothing
+      case eRes of
+        Left err -> putStrLn $ "Error: " ++ err
+        Right response -> putStrLn $ "Translation: " ++ (T.unpack response)
 ```
 
-### Project status
+## Documentation
 
-The project is currently under development and is in premature state.
+Documentation will soon be available on hackage.
 
-### License
+## Examples
 
-This project is licensed under the MIT License.
+Explore the `examples` directory in the repository for more use cases, including:
 
-### Contributing
+- **Conversational Agents**: Building chatbots that maintain context.
+- **Document Q&A**: Answering questions based on the content of provided documents.
+- **Tool Use**: Creating agents that can use external tools to fetch information or perform calculations.
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue.
+## Contributing
+
+Contributions are welcome! If you'd like to contribute, please fork the repository and submit a pull request. 
+For major changes, please open an issue first to discuss what you'd like to change.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+This project is inspired by and builds upon the original [LangChain](https://github.com/langchain-ai/langchain) library and its various ports in other programming languages. 
+Special thanks to the developers of those projects for their foundational work.

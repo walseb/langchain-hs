@@ -13,8 +13,8 @@ import Test.Tasty
 import Test.Tasty.HUnit
 
 import Langchain.Tool.Core
+import Langchain.Tool.WebScraper
 import Langchain.Tool.WikipediaTool
--- import Langchain.Tool.WebScraper
 
 data MockTool = MockTool Text
   deriving (Show, Eq)
@@ -36,16 +36,14 @@ tests =
     , testCase "WikipediaTool search functionality" testWikipediaToolSearch
     , testCase "SearchResponse parsing" testSearchResponseParsing
     , testCase "PageResponse parsing" testPageResponseParsing
- --   , testCase "WebScraper Tool" testWebScraperTool 
+    , testCase "WebScraper Tool" testWebScraperTool
     ]
 
-{-
 testWebScraperTool :: Assertion
-testWebScraperTool = do 
+testWebScraperTool = do
   r <- runTool WebScraper "https://hackage.haskell.org/package/scalpel-0.6.2.2"
   assertBool "Scraper should contain stuff like title" $
-        T.isInfixOf "There are two general mechanisms provided by this library that are used to build web scrapers:" r
-        -}
+    T.isInfixOf "scalpel: A high level web scraping library for Haskell" r
 
 testMockTool :: Assertion
 testMockTool = do

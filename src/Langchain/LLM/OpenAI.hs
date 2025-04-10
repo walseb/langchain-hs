@@ -4,8 +4,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
+-- This module is not tested since I don't have the OpenAI api key.
+
+{- |
+Module      : Langchain.LLM.OpenAI
+Description : OpenAI integration for LangChain Haskell
+Copyright   : (c) 2025 Tushar Adhatrao
+License     : MIT
+Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
+Stability   : experimental
+
+OpenAI implementation of LangChain's LLM interface. Not tested
+-}
 module Langchain.LLM.OpenAI
-  ( ChatCompletionRequest (..)
+  ( OpenAI (..)
+  -- * Data Types
+  , ChatCompletionRequest (..)
   , ChatCompletionResponse (..)
   , Message (..)
   , Role (..)
@@ -36,17 +50,32 @@ module Langchain.LLM.OpenAI
   , ApproximateLocation (..)
   , CompletionTokensDetails (..)
   , PromptTokensDetails (..)
+  -- * Functions
   , createChatCompletion
+  , defaultChatCompletionRequest
+  , defaultMessage
   ) where
 
 import Data.Aeson
+import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
+import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import GHC.Generics
+import Langchain.Callback (Callback)
+import qualified Langchain.LLM.Core as LLM
 import Network.HTTP.Simple
 import Network.HTTP.Types.Status (statusCode)
 
+{- | Represents different roles in a conversation
+User: Human user input
+Assistant: AI-generated response
+System: System-level instructions
+Developer: Special role for developer messages
+Tool: Tool interaction messages
+Function: Function call messages
+-}
 data Role
   = User
   | Assistant
@@ -191,6 +220,9 @@ instance FromJSON ToolCall where
       <*> v .: "type"
       <*> v .: "function"
 
+{- | Configuration for audio processing
+Specifies format and voice preferences for text-to-speech
+-}
 data AudioConfig = AudioConfig
   { format :: Text
   , voice :: Text
@@ -235,6 +267,9 @@ instance FromJSON AudioResponse where
       <*> v .: "id"
       <*> v .: "transcript"
 
+{- | Represents a single message in a conversation
+Contains role, content, and optional metadata like function calls or audio responses.
+-}
 data Message = Message
   { role :: Role
   , content :: Maybe MessageContent
@@ -246,6 +281,19 @@ data Message = Message
   , refusal :: Maybe Text
   }
   deriving (Show, Eq, Generic)
+
+defaultMessage :: Message
+defaultMessage =
+  Message
+    { role = User
+    , content = Nothing
+    , name = Nothing
+    , functionCall = Nothing
+    , toolCalls = Nothing
+    , toolCallId = Nothing
+    , audio = Nothing
+    , refusal = Nothing
+    }
 
 instance ToJSON Message where
   toJSON Message {..} =
@@ -452,7 +500,9 @@ instance FromJSON WebSearchOptions where
       <$> v .:? "search_context_size"
       <*> v .:? "user_location"
 
--- Request Types
+{- | Main request type for chat completions
+Contains all parameters for configuring the OpenAI chat completion API call.
+-}
 data ChatCompletionRequest = ChatCompletionRequest
   { messages :: [Message]
   , model :: Text
@@ -640,7 +690,7 @@ data ChatCompletionResponse = ChatCompletionResponse
   { choices :: [Choice]
   , created :: Integer
   , id_ :: Text
-  , model :: Text
+  , responseModel :: Text
   , object_ :: Text
   , serviceTier :: Maybe Text
   , systemFingerprint :: Text
@@ -660,16 +710,66 @@ instance FromJSON ChatCompletionResponse where
       <*> v .: "system_fingerprint"
       <*> v .: "usage"
 
+{- | Default chat completion request
+Uses "gpt-4o-mini-2024-07-18" as the default model. All other parameters are set to Nothing.
+-}
+defaultChatCompletionRequest :: ChatCompletionRequest
+defaultChatCompletionRequest =
+  ChatCompletionRequest
+    { messages = []
+    , model = "gpt-4o-mini-2024-07-18"
+    , frequencyPenalty = Nothing
+    , logitBias = Nothing
+    , logprobs = Nothing
+    , maxCompletionTokens = Nothing
+    , maxTokens = Nothing
+    , metadata = Nothing
+    , modalities = Nothing
+    , n = Nothing
+    , parallelToolCalls = Nothing
+    , prediction = Nothing
+    , presencePenalty = Nothing
+    , reasoningEffort = Nothing
+    , responseFormat = Nothing
+    , seed = Nothing
+    , serviceTier = Nothing
+    , stop = Nothing
+    , store = Nothing
+    , stream = Nothing
+    , streamOptions = Nothing
+    , temperature = Nothing
+    , toolChoice = Nothing
+    , tools = Nothing
+    , topLogprobs = Nothing
+    , topP = Nothing
+    , user = Nothing
+    , webSearchOptions = Nothing
+    , audio = Nothing
+    }
+
+{- | Creates a chat completion request
+Sends the request to OpenAI API and returns the parsed response.
+
+Example usage:
+@
+response <- createChatCompletion "your-api-key" request
+case response of
+  Right res -> print (choices res)
+  Left err -> putStrLn err
+@
+-}
 createChatCompletion :: Text -> ChatCompletionRequest -> IO (Either String ChatCompletionResponse)
 createChatCompletion apiKey r = do
+  request_ <- parseRequest "https://api.openai.com/v1/chat/completions"
   let req =
         setRequestMethod "POST" $
-          setRequestHost "api.openai.com" $
-            setRequestPath "/v1/chat/completions" $
-              setRequestHeader "Content-Type" ["application/json"] $
-                setRequestHeader "Authorization" ["Bearer " <> encodeUtf8 apiKey] $
-                  setRequestBodyJSON r $
-                    defaultRequest
+          setRequestSecure True $
+            setRequestHost "api.openai.com" $
+              setRequestPath "/v1/chat/completions" $
+                setRequestHeader "Content-Type" ["application/json"] $
+                  setRequestHeader "Authorization" ["Bearer " <> encodeUtf8 apiKey] $
+                    setRequestBodyJSON r $
+                      request_
 
   response <- httpLBS req
   let status = statusCode $ getResponseStatus response
@@ -678,3 +778,93 @@ createChatCompletion apiKey r = do
       Left err -> return $ Left $ "JSON parse error: " <> err
       Right completionResponse -> return $ Right completionResponse
     else return $ Left $ "API error: " <> show status <> " " <> show (getResponseBody response)
+
+data OpenAI = OpenAI
+  { apiKey :: Text
+  , openAIModelName :: Text
+  , callbacks :: [Callback]
+  }
+
+instance Show OpenAI where
+  show OpenAI {..} = "OpenAI " ++ show openAIModelName
+
+instance LLM.LLM OpenAI where
+  generate OpenAI {..} prompt _ = do
+    eRes <-
+      createChatCompletion
+        apiKey
+        ( defaultChatCompletionRequest
+            { model = openAIModelName
+            , messages =
+                [ Message
+                    { role = User
+                    , content = Just (StringContent prompt)
+                    , name = Nothing
+                    , functionCall = Nothing
+                    , toolCalls = Nothing
+                    , toolCallId = Nothing
+                    , audio = Nothing
+                    , refusal = Nothing
+                    }
+                ]
+            }
+        )
+    case eRes of
+      Left err -> return $ Left err
+      Right r -> do
+        case listToMaybe (choices r) of
+          Nothing -> return $ Left "Did not received any response"
+          Just resp ->
+            let Message {..} = message resp
+             in pure $
+                  Right $
+                    maybe
+                      ""
+                      ( \c -> case c of
+                          StringContent t -> t
+                          ContentParts _ -> ""
+                      )
+                      content
+  chat OpenAI {..} msgs _ = do
+    eRes <-
+      createChatCompletion
+        apiKey
+        ( defaultChatCompletionRequest
+            { model = openAIModelName
+            , messages = toOpenAIMessages msgs
+            }
+        )
+    case eRes of
+      Left err -> return $ Left err
+      Right r -> do
+        case listToMaybe (choices r) of
+          Nothing -> return $ Left "Did not received any response"
+          Just resp ->
+            let Message {..} = message resp
+             in pure $
+                  Right $
+                    maybe
+                      ""
+                      ( \c -> case c of
+                          StringContent t -> t
+                          ContentParts _ -> ""
+                      )
+                      content
+
+  stream _ _ _ _ = return $ Left "stream functionality for OpenAI is not supported yet"
+
+toOpenAIMessages :: LLM.ChatMessage -> [Message]
+toOpenAIMessages msgs = map go (NE.toList msgs)
+  where
+    toRole r = case r of
+      LLM.System -> System
+      LLM.User -> User
+      LLM.Assistant -> Assistant
+      LLM.Tool -> Tool
+
+    go :: LLM.Message -> Message
+    go msg =
+      defaultMessage
+        { role = toRole $ LLM.role msg
+        , content = Just $ StringContent (LLM.content msg)
+        }

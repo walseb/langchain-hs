@@ -14,16 +14,16 @@ import qualified Data.List.NonEmpty as NE
 
 main :: IO ()
 main = do
-  putStrLn "=== Agent Example using ReactAgent with Ollama (gemma3) ==="
-  -- Create an instance of Ollama with the gemma3 model.
-  let ollamaLLM = Ollama "gemma3" []  -- Provide callbacks if needed.
+  putStrLn "=== Agent Example using ReactAgent with Ollama (llama3.2) ==="
+  -- Create an instance of Ollama with the llama3.2 model.
+  let ollamaLLM = Ollama "llama3.2" []  -- Provide callbacks if needed.
       tools = []  -- You can add real tools to this list if available.
   agentE <- createReactAgent ollamaLLM tools
   case agentE of
     Left err -> putStrLn $ "Error creating agent: " ++ err
     Right reactAgent -> do
       -- Create initial memory with a system message.
-      let initMsg = initialChatMessage "You are an AI assistant powered by Ollama (gemma3)"
+      let initMsg = initialChatMessage "You are an AI assistant powered by Ollama (llama3.2)"
           initMemory = WindowBufferMemory { maxWindowSize = 5, windowBufferMessages = initMsg }
           initState = AgentState { agentMemory = initMemory, agentToolResults = [], agentSteps = [] }
       

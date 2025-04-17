@@ -73,7 +73,7 @@ Using 'stdOutCallback' in an LLM operation:
 
 @
 let callbacks = [stdOutCallback]
-result <- generate (Ollama "gemma3:latest" callbacks) "What is 2+2?" Nothing
+result <- generate (Ollama "llama3.2:latest" callbacks) "What is 2+2?" Nothing
 -- Output will include:
 -- Model operation started
 -- Model completed with

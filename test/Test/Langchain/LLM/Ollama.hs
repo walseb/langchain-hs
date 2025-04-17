@@ -29,7 +29,7 @@ captureEvents = do
   return (callback, getEvents)
 
 testModelName :: Text
-testModelName = "gemma3:latest"
+testModelName = "llama3.2:latest"
 
 tests :: TestTree
 tests =
@@ -115,7 +115,7 @@ tests =
         case result of
           Left err -> assertFailure $ "Expected success, got error: " ++ err
           Right response -> assertBool "Should mention 4" ("4" `T.isInfixOf` T.toLower response)
-    {- gemma3 does not support insert
+    {- llama3.2 does not support insert
     , testCase "generate appends suffix when provided" $ do
         (callback, getEvents) <- captureEvents
         let ollama = Ollama testModelName [callback]

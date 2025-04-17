@@ -48,7 +48,7 @@ import qualified Data.Text as T
 
 main :: IO ()
 main = do 
-  let ollamaLLM = Ollama "gemma3" [stdOutCallback]
+  let ollamaLLM = Ollama "llama3.2" [stdOutCallback]
       prompt = PromptTemplate "Translate the following English text to French: {text}"
       input = Map.fromList [("text", "Hello, how are you?")]
       

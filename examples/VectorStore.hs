@@ -26,7 +26,7 @@ main = do
   putStrLn "=== VectorStore Example ==="
   let store0 = InMemoryVectorStore []
       doc1 = Document "Haskell is a functional programming language." mempty
-      doc2 = Document "Ollama offers LLM services using models like gemma3." mempty
+      doc2 = Document "Ollama offers LLM services using models like llama3.2." mempty
       store  = addDocument (addDocument store0 doc1) doc2
   searchResult <- similaritySearch store "Haskell" 5
   case searchResult of

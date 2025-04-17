@@ -159,7 +159,7 @@ instance LLM TestLLM where
 
 
 @
-ollamaLLM = Ollama "gemma3:latest" [stdOutCallback]
+ollamaLLM = Ollama "llama3.2:latest" [stdOutCallback]
 response <- generate ollamaLLM "What is Haskell?" Nothing
 @
 -}

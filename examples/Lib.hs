@@ -84,8 +84,8 @@ someFunc = do
           onComplete = pure ()
       }
 
-  -- Create an OllamaLLM instance using the "gemma3:latest" model.
-  let ollamaLLM = Ollama "gemma3:latest" [stdOutCallback]
+  -- Create an OllamaLLM instance using the "llama3.2:latest" model.
+  let ollamaLLM = Ollama "llama3.2:latest" [stdOutCallback]
   ollamaGenRes <- generate ollamaLLM "What is 2+2?" Nothing
   print ollamaGenRes
   

@@ -19,10 +19,10 @@ instance Retriever DummyRetriever where
 
 main :: IO ()
 main = do
-  putStrLn "=== Retrieval Example using MultiQueryRetriever with Ollama (gemma3) ==="
+  putStrLn "=== Retrieval Example using MultiQueryRetriever with Ollama (llama3.2) ==="
   let baseRetriever = DummyRetriever
-      -- Instantiate Ollama with the "gemma3" model.
-      ollamaLLM = Ollama "gemma3" []
+      -- Instantiate Ollama with the "llama3.2" model.
+      ollamaLLM = Ollama "llama3.2" []
       mqRetriever = newMultiQueryRetriever baseRetriever ollamaLLM
   
   result <- _get_relevant_documents mqRetriever "What is Langchain-HS?"

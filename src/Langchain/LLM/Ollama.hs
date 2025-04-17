@@ -119,7 +119,7 @@ instance LLM Ollama where
   --  Returns Left on API errors, Right on success.
   --
   --  Example:
-  --  >>> generate (Ollama "llama3.2" []) "Hello" Nothing
+  --  >>> generate (Ollama "gemma3" []) "Hello" Nothing
   --  Right "Hello! How can I assist you today?"
   --
   generate (Ollama model cbs) prompt mbOllamaParams = do

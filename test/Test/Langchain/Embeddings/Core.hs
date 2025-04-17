@@ -25,7 +25,7 @@ tests =
     [ testGroup
         "embedQuery Tests"
         [ testCase "Returns embedding on successful response" $ do
-            let embeddings = OllamaEmbeddings "llama3.2:latest" Nothing Nothing
+            let embeddings = OllamaEmbeddings "gemma3:latest" Nothing Nothing
             result <- embedQuery embeddings "test query"
             case result of
               Left err -> assertFailure $ "Expected success, got error: " ++ err
@@ -50,7 +50,7 @@ tests =
     , testGroup
         "embedDocuments Tests"
         [ testCase "Processes multiple documents successfully" $ do
-            let embeddings = OllamaEmbeddings "llama3.2:latest" Nothing Nothing
+            let embeddings = OllamaEmbeddings "gemma3:latest" Nothing Nothing
                 docs = replicate 3 (Document "content" mempty)
             -- Assuming each embeddingOps call returns Right mockSuccessResponse
             result <- embedDocuments embeddings docs

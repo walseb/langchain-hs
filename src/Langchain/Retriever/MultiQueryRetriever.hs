@@ -252,7 +252,7 @@ instance (Retriever a, LLM m) => Retriever (MultiQueryRetriever a m) where
  ghci> newVs <- addDocuments vs [Document "Tushar is 25 years old." empty]
  ghci> let newVs_ = fromRight vs newVs
  ghci> let vRet = VectorStoreRetriever newVs_
- ghci> let ollamLLM = Ollama "llama3.2" []
+ ghci> let ollamLLM = Ollama "gemma3" []
  ghci> let mqRet = newMultiQueryRetriever vRet ollamLLM
  ghci> documents <- _get_relevant_documents mqRet "How old is Tushar?"
  ghci> documents

@@ -18,7 +18,7 @@ import Data.List.NonEmpty (fromList)
 main :: IO ()
 main = do
   putStrLn "=== Ollama LLM Example ==="
-  let ollamaLLM = Ollama "llama3.2" []  -- Using real Ollama integration with llama3.2
+  let ollamaLLM = Ollama "gemma3" []  -- Using real Ollama integration with gemma3
   -- Example: generate a text completion.
   genResult <- generate ollamaLLM "Explain Haskell in simple terms." Nothing
   case genResult of

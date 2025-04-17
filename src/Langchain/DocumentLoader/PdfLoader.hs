@@ -20,7 +20,6 @@ module Langchain.DocumentLoader.PdfLoader
 
 import Data.Aeson
 import Data.Map (fromList)
-import Data.Text (pack)
 import Langchain.DocumentLoader.Core
 import Langchain.TextSplitter.Character
 import Pdf.Document hiding (Document)
@@ -90,9 +89,9 @@ instance BaseLoader PdfLoader where
         return $ Left $ "File not found: " ++ path
 
   -- \|
-  --  Loads the raw content of the PDF file and splits it using a recursive character splitter.
+  --  Loads the raw content of the PDF file and splits it using a character splitter.
   --
-  --  This method reads the entire file as text (without parsing its PDF structure) and applies
+  --  This method reads the entire pdf as text and applies
   --  'splitText' with default recursive character options to divide the text into chunks.
   --  This approach is useful when only a simple text split is required rather than structured
   --  page extraction.
@@ -104,7 +103,7 @@ instance BaseLoader PdfLoader where
     exists <- doesFileExist path
     if exists
       then do
-        content <- readFile path
-        return $ Right $ splitText defaultCharacterSplitterOps (pack content)
+        documents <- readPdf path
+        return $ Right $ splitText defaultCharacterSplitterOps (pageContent $ mconcat documents)
       else
         return $ Left $ "File not found: " ++ path

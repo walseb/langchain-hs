@@ -1,5 +1,4 @@
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 {- |
 Module      : Langchain.Runnable.Core

@@ -97,7 +97,10 @@ instance Embeddings OllamaEmbeddings where
   --
   embedDocuments (OllamaEmbeddings {..}) docs = do
     -- For each input text, make an individual API call
-    results <- mapM (\doc -> embeddingOps model (pageContent doc) defaultTruncate defaultKeepAlive) docs
+    results <-
+      mapM
+        (\doc -> embeddingOps model (pageContent doc) defaultTruncate defaultKeepAlive)
+        docs
     -- Combine the results, handling errors appropriately
     return $
       sequence results >>= \resps ->

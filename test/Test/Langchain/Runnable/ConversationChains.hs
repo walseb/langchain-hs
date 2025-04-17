@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Langchain.Runnable.ConversationChains (tests) where
 
@@ -54,6 +55,7 @@ data MockLLM = MockLLM
   }
 
 instance LLM MockLLM where
+  type LLMParams MockLLM = String
   chat llm0 (msgs :: NonEmpty Message) _ = do
     writeIORef (receivedMessages llm0) (NE.toList msgs)
     return (llmResponse llm0)

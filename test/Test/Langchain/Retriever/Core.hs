@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Langchain.Retriever.Core (tests) where
 
@@ -16,6 +17,7 @@ data DummyLLM = DummyLLM
 
 --TODO: Add some real world examples here
 instance LLM DummyLLM where
+  type LLMParams DummyLLM = String
   -- When 'generate' is called, we return a fixed response in the format expected by the
   -- NumberSeparatedList parser. For example:
   --

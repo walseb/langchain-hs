@@ -22,6 +22,7 @@ import Langchain.Tool.Core (Tool(..))
 data MockLLM = MockLLM { mockResponse :: Text }
 
 instance LLM MockLLM where
+  type LLMParams MockLLM = Text
   generate _ _ _ = undefined
   chat (MockLLM resp) _ _ = return $ Right resp
   stream _ _ _ _ = undefined

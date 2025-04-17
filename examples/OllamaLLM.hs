@@ -20,7 +20,7 @@ main = do
   putStrLn "=== Ollama LLM Example ==="
   let ollamaLLM = Ollama "llama3.2" []  -- Using real Ollama integration with llama3.2
   -- Example: generate a text completion.
-  genResult <- generate ollamaLLM "Explain Haskell in simple terms." (Just defaultParams)
+  genResult <- generate ollamaLLM "Explain Haskell in simple terms." Nothing
   case genResult of
     Left err -> putStrLn $ "Generate error: " ++ err
     Right text -> putStrLn $ "Generated Text:\n" ++ T.unpack text
@@ -30,7 +30,7 @@ main = do
         [ Message System "You are an AI assistant." defaultMessageData
         , Message User "What is functional programming?" defaultMessageData
         ]
-  chatResult <- chat ollamaLLM chatHistory (Just defaultParams)
+  chatResult <- chat ollamaLLM chatHistory Nothing
   case chatResult of
     Left err -> putStrLn $ "Chat error: " ++ err
     Right response -> putStrLn $ "Chat Response:\n" ++ T.unpack response

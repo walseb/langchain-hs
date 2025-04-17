@@ -38,11 +38,13 @@ streamHandler = StreamHandler print (putStrLn "Done")
 streamResult <- stream ollamaLLM messages streamHandler Nothing
 @
 -}
-module Langchain.LLM.Ollama (Ollama (..)) where
+module Langchain.LLM.Ollama (Ollama (..), OllamaParams(..), defaultOllamaParams) where
 
+import Data.Aeson
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Ollama.Chat as OllamaChat
+import qualified Data.Ollama.Common.Types as O
 import qualified Data.Ollama.Generate as OllamaGenerate
 import Data.Text (Text)
 import Langchain.Callback (Callback, Event (..))
@@ -70,6 +72,34 @@ data Ollama = Ollama
 instance Show Ollama where
   show (Ollama modelName _) = "Ollama " ++ show modelName
 
+-- | Ollama Params contains same fields GenerateOps and ChatOps from [ollama-haskell](https://hackage.haskell.org/package/ollama-haskell)
+data OllamaParams = OllamaParams
+  { suffix :: Maybe Text
+  -- ^ An optional suffix to append to the generated text.
+  , images :: Maybe [Text]
+  -- ^ Optional list of base64 encoded images to include with the request.
+  , format :: Maybe O.Format
+  -- ^ An optional format specifier for the response.
+  , system :: Maybe Text
+  -- ^ Optional system text that can be included in the generation context.
+  , template :: Maybe Text
+  -- ^ An optional streaming function where the first function handles each chunk of response, and the second flushes the stream.
+  -- ^ This will not work for chat and stream, use promptTemplate instead
+  , raw :: Maybe Bool
+  -- ^ An optional flag to return the raw response.
+  , keepAlive :: Maybe Text
+  -- ^ Optional text to specify keep-alive behavior.
+  , hostUrl :: Maybe Text
+  -- ^ Override default Ollama host url. Default url = "http://127.0.0.1:11434"
+  , responseTimeOut :: Maybe Int
+  -- ^ Override default response timeout in minutes. Default = 15 minutes
+  , options :: Maybe Value
+  -- ^ additional model parameters listed in the documentation for the Modelfile such as temperature
+  , tools :: Maybe [Value]
+  -- ^ Optional tools that may be used in the chat. Will only work for chat and stream and not Generate.
+  }
+  deriving (Eq, Show)
+
 {- | Ollama implementation of the LLM typeclass
 Note: Params argument is currently ignored (see TODOs).
 
@@ -83,6 +113,8 @@ case generate ollamaLLM "Hello" Nothing of
 @
 -}
 instance LLM Ollama where
+  type LLMParams Ollama = OllamaParams
+
   -- \| Generate text from a prompt
   --  Returns Left on API errors, Right on success.
   --
@@ -90,7 +122,7 @@ instance LLM Ollama where
   --  >>> generate (Ollama "llama3.2" []) "Hello" Nothing
   --  Right "Hello! How can I assist you today?"
   --
-  generate (Ollama model cbs) prompt _ = do
+  generate (Ollama model cbs) prompt mbOllamaParams = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
       OllamaGenerate.generate
@@ -98,6 +130,16 @@ instance LLM Ollama where
           { OllamaGenerate.modelName = model
           , OllamaGenerate.prompt = prompt
           , OllamaGenerate.stream = Nothing
+          , OllamaGenerate.suffix = maybe Nothing suffix mbOllamaParams
+          , OllamaGenerate.images = maybe Nothing images mbOllamaParams
+          , OllamaGenerate.format = maybe Nothing format mbOllamaParams
+          , OllamaGenerate.system = maybe Nothing system mbOllamaParams
+          , OllamaGenerate.template = maybe Nothing template mbOllamaParams
+          , OllamaGenerate.raw = maybe Nothing raw mbOllamaParams
+          , OllamaGenerate.keepAlive = maybe Nothing keepAlive mbOllamaParams
+          , OllamaGenerate.hostUrl = maybe Nothing hostUrl mbOllamaParams
+          , OllamaGenerate.responseTimeOut = maybe Nothing responseTimeOut mbOllamaParams
+          , OllamaGenerate.options = maybe Nothing options mbOllamaParams
           }
     case eRes of
       Left err -> do
@@ -115,7 +157,7 @@ instance LLM Ollama where
   --  >>> chat (Ollama "llama3" []) msgs Nothing
   --  Right "How are you today?"
   --
-  chat (Ollama model cbs) messages _ = do
+  chat (Ollama model cbs) messages mbOllamaParams = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
       OllamaChat.chat
@@ -123,6 +165,12 @@ instance LLM Ollama where
           { OllamaChat.chatModelName = model
           , OllamaChat.messages = toOllamaMessages messages
           , OllamaChat.stream = Nothing
+          , OllamaChat.tools = maybe Nothing tools mbOllamaParams
+          , OllamaChat.format = maybe Nothing format mbOllamaParams
+          , OllamaChat.keepAlive = maybe Nothing keepAlive mbOllamaParams
+          , OllamaChat.hostUrl = maybe Nothing hostUrl mbOllamaParams
+          , OllamaChat.responseTimeOut = maybe Nothing responseTimeOut mbOllamaParams
+          , OllamaChat.options = maybe Nothing options mbOllamaParams
           }
     case eRes of
       Left err -> do
@@ -142,7 +190,7 @@ instance LLM Ollama where
   --  >>> stream (Ollama "llama3" []) messages handler Nothing
   --  Token: H Token: i Complete
   --
-  stream (Ollama model_ cbs) messages StreamHandler {onToken, onComplete} _ = do
+  stream (Ollama model_ cbs) messages StreamHandler {onToken, onComplete} mbOllamaParams = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
       OllamaChat.chat
@@ -150,6 +198,12 @@ instance LLM Ollama where
           { OllamaChat.chatModelName = model_
           , OllamaChat.messages = toOllamaMessages messages
           , OllamaChat.stream = Just (onToken . chatRespToText, onComplete)
+          , OllamaChat.tools = maybe Nothing tools mbOllamaParams
+          , OllamaChat.format = maybe Nothing format mbOllamaParams
+          , OllamaChat.keepAlive = maybe Nothing keepAlive mbOllamaParams
+          , OllamaChat.hostUrl = maybe Nothing hostUrl mbOllamaParams
+          , OllamaChat.responseTimeOut = maybe Nothing responseTimeOut mbOllamaParams
+          , OllamaChat.options = maybe Nothing options mbOllamaParams
           }
     case eRes of
       Left err -> do
@@ -189,6 +243,22 @@ instance Run.Runnable Ollama where
   --  Currently delegates to 'chat' method with default parameters.
   --
   invoke model input = chat model input Nothing
+
+-- Default values for OllamaParams
+defaultOllamaParams :: OllamaParams
+defaultOllamaParams = OllamaParams
+  { suffix = Nothing
+  , images = Nothing
+  , format = Nothing
+  , system = Nothing
+  , template = Nothing
+  , raw = Nothing
+  , keepAlive = Nothing
+  , hostUrl = Nothing
+  , responseTimeOut = Nothing
+  , options = Nothing
+  , tools = Nothing
+  }
 
 {- $examples
 Test case patterns:

@@ -3,6 +3,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- This module is not tested since I don't have the OpenAI api key.
 
@@ -789,6 +790,8 @@ instance Show OpenAI where
   show OpenAI {..} = "OpenAI " ++ show openAIModelName
 
 instance LLM.LLM OpenAI where
+  type LLMParams OpenAI = Text -- Added for removing warning
+
   generate OpenAI {..} prompt _ = do
     eRes <-
       createChatCompletion

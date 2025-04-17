@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Langchain.LLM.Core (tests) where
 
@@ -10,6 +11,7 @@ import Data.Aeson (Result (..), decode, encode, fromJSON, toJSON)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text)
 import Langchain.LLM.Core
+import Data.Maybe (fromMaybe)
 
 data TestLLM = TestLLM
   { responseText :: Text
@@ -17,10 +19,12 @@ data TestLLM = TestLLM
   }
 
 instance LLM TestLLM where
-  generate m _ _ =
+  type LLMParams TestLLM = Text
+ 
+  generate m _ mbParams =
     pure $
       if shouldSucceed m
-        then Right (responseText m)
+        then Right (fromMaybe (responseText m) mbParams)
         else Left "Test error"
 
   chat m _ _ =
@@ -41,22 +45,8 @@ tests :: TestTree
 tests =
   testGroup
     "LLMCoreTest"
-    [ testGroup
-        "Params"
-        [ testCase "creates default parameters with all Nothing fields" $ do
-            let params = defaultParams
-            assertEqual "temperature should be Nothing" Nothing (temperature params)
-            assertEqual "maxTokens should be Nothing" Nothing (maxTokens params)
-            assertEqual "topP should be Nothing" Nothing (topP params)
-            assertEqual "n should be Nothing" Nothing (n params)
-            assertEqual "stop should be Nothing" Nothing (stop params)
-        , testCase "can override default parameters" $ do
-            let params = defaultParams {temperature = Just 0.7, maxTokens = Just 100}
-            assertEqual "temperature should be Just 0.7" (Just 0.7) (temperature params)
-            assertEqual "maxTokens should be Just 100" (Just 100) (maxTokens params)
-            assertEqual "topP should be Nothing" Nothing (topP params)
-        ]
-    , testGroup
+    [ 
+    testGroup
         "Role"
         [ testCase "has correct equality" $ do
             assertEqual "System equals System" System System
@@ -116,7 +106,13 @@ tests =
         "LLM Typeclass"
         [ testGroup
             "generate"
-            [ testCase "returns Right with response for successful generation" $ do
+            [ 
+              testCase "generate uses provided LLMParams" $ do
+            let testLLM = TestLLM { responseText = "Default", shouldSucceed = True }
+            result <- generate testLLM "Prompt" (Just "CustomParam")
+            assertEqual "Should return CustomParam" (Right "CustomParam") result
+
+             , testCase "returns Right with response for successful generation" $ do
                 let successLLM = TestLLM "Success response" True
                 result <- generate successLLM "Test prompt" Nothing
                 assertEqual "Successful generation" (Right "Success response") result
@@ -124,11 +120,6 @@ tests =
                 let failureLLM = TestLLM "Failure response" False
                 result <- generate failureLLM "Test prompt" Nothing
                 assertEqual "Failed generation" (Left "Test error") result
-            , testCase "works with custom parameters" $ do
-                let successLLM = TestLLM "Success response" True
-                    params = defaultParams {temperature = Just 0.5}
-                result <- generate successLLM "Test prompt" (Just params)
-                assertEqual "Generation with custom params" (Right "Success response") result
             ]
         , testGroup
             "chat"

@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RecordWildCards #-}
 
 {- |
@@ -34,11 +35,9 @@ module Langchain.LLM.Core
   , Role (..)
   , ChatMessage
   , MessageData (..)
-  , Params (..)
   , StreamHandler (..)
 
     -- * Default Values
-  , defaultParams
   , defaultMessageData
   ) where
 
@@ -46,35 +45,6 @@ import Data.Aeson
 import Data.List.NonEmpty
 import Data.Text (Text)
 import GHC.Generics
-
-{- | Parameters for configuring language model invocations.
-These parameters control aspects such as randomness, length, and stopping conditions of generated output.
-This type corresponds to standard parameters in Python Langchain:
-https://python.langchain.com/docs/concepts/chat_models/#standard-parameters
-
-Example usage:
-
-@
-myParams :: Params
-myParams = defaultParams
-  { temperature = Just 0.7
-  , maxTokens = Just 100
-  }
-@
--}
-data Params = Params
-  { temperature :: Maybe Double
-  -- ^ Sampling temperature. Higher values increase randomness (creativity), while lower values make output more focused.
-  , maxTokens :: Maybe Integer
-  , --- ^ Maximum number of tokens to generate in the response.
-    topP :: Maybe Double
-  -- ^ Nucleus sampling parameter. Considers tokens whose cumulative probability mass is at least @topP@.
-  , n :: Maybe Int
-  -- ^ Number of responses to generate (e.g., for sampling multiple outputs).
-  , stop :: Maybe [Text]
-  -- ^ Sequences where generation should stop (e.g., ["\n"] stops at newlines).
-  }
-  deriving (Show, Eq)
 
 {- | Callbacks for handling streaming responses from a language model.
 This allows real-time processing of tokens as they are generated and an action
@@ -196,6 +166,7 @@ response <- generate ollamaLLM "What is Haskell?" Nothing
 class LLM m where
   -- | Invoke the language model with a single prompt.
   --        Suitable for simple queries; returns either an error or generated text.
+  type LLMParams m
 
   {- === Using 'generate'
   To invoke an LLM with a single prompt:
@@ -211,7 +182,7 @@ class LLM m where
   -}
   generate :: m -- ^ The type of the language model instance.
     -> Text -- ^ The prompt to send to the model.
-    -> Maybe Params -- ^ Optional configuration parameters.
+    -> Maybe (LLMParams m) -- ^ Optional configuration parameters.
     -> IO (Either String Text)
 
   -- | Chat with the language model using a sequence of messages.
@@ -219,24 +190,9 @@ class LLM m where
   --
   chat :: m -- ^ The type of the language model instance.
     -> ChatMessage -- ^ A non-empty list of messages to send to the model.
-    -> Maybe Params -- ^ Optional configuration parameters.
+    -> Maybe (LLMParams m) -- ^ Optional configuration parameters.
     -> IO (Either String Text) -- ^ The result of the chat, either an error or the response text.
 
   -- | Stream responses from the language model for a sequence of messages.
   -- Uses callbacks to process tokens in real-time; returns either an error or unit.
-  stream :: m -> ChatMessage -> StreamHandler -> Maybe Params -> IO (Either String ())
-
-{- | Default parameters with all fields set to Nothing.
-Use this when no specific configuration is needed for the language model.
-
->>> generate myLLM "Hello" (Just defaultParams)
--}
-defaultParams :: Params
-defaultParams =
-  Params
-    { temperature = Nothing
-    , maxTokens = Nothing
-    , topP = Nothing
-    , n = Nothing
-    , stop = Nothing
-    }
+  stream :: m -> ChatMessage -> StreamHandler -> Maybe (LLMParams m) -> IO (Either String ())

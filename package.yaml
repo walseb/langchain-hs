@@ -15,7 +15,6 @@ description: Build LLM-powered applications in Haskell.
 
 dependencies:
 - base >= 4.7 && < 5
-- http-conduit >= 2 && < 3
 - text >= 2 && < 3
 - aeson >= 2 && < 3
 - bytestring >= 0.10
@@ -25,6 +24,8 @@ dependencies:
 - ollama-haskell
 - scalpel >= 0.6 && < 0.7
 - http-types >= 0.11 && < 0.13
+- http-conduit >= 2 && < 3
+- conduit >= 1.2 && < 1.4
 
 ghc-options:
 - -Wall

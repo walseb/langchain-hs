@@ -233,6 +233,7 @@ toOllamaMessages = NonEmpty.map $ \Message {..} ->
     toOllamaRole System = OllamaChat.System
     toOllamaRole Assistant = OllamaChat.Assistant
     toOllamaRole Tool = OllamaChat.Tool
+    toOllamaRole _ = OllamaChat.User -- Ollama only supports above 4 Roles, others will be defaulted to user
 
 instance Run.Runnable Ollama where
   type RunnableInput Ollama = ChatMessage

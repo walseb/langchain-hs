@@ -75,6 +75,10 @@ data Role
     Assistant
   | -- | Tool role, for tool outputs or interactions
     Tool
+  | Developer
+    -- | Special role for developer messages. Specific to only some integrations
+  | Function
+    -- | Function call messages. Specific to only some integrations
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 {- | Represents a message in a conversation, including the sender's role, content,

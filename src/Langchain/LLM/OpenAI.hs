@@ -18,6 +18,26 @@ The 'OpenAI' type encapsulates the API key, model name, and callbacks for event 
 The 'LLM' instance methods ('generate', 'chat', 'stream') allow for seamless integration with LangChain's processing pipelines.
 
 For more information on OpenAI's API, see: <https://platform.openai.com/docs/api-reference>
+
+### Example Usage
+
+**Text Generation:**
+```haskell
+import Data.Text (Text)
+import qualified Langchain.LLM.Core as LLM
+import Langchain.LLM.OpenAI (OpenAI(..))
+
+main :: IO ()
+main = do
+  let openAI = OpenAI
+        { apiKey = "your-api-key"
+        , openAIModelName = "gpt-3.5-turbo"
+        , callbacks = []
+        }
+  result <- LLM.generate openAI "Tell me a joke" Nothing
+  case result of
+    Left err -> putStrLn $ "Error: " ++ err
+    Right response -> putStrLn response
 -}
 module Langchain.LLM.OpenAI
   ( OpenAI (..)

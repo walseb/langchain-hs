@@ -40,10 +40,22 @@ module Langchain.LLM.Internal.OpenAI
   , ApproximateLocation (..)
   , CompletionTokensDetails (..)
   , PromptTokensDetails (..)
+  , OpenAIParams (..)
   , defaultChatCompletionRequest
   , createChatCompletion
   , createChatCompletionStream
   , defaultMessage
+  , defaultOpenAIParams
+  , defaultPredictionOutput
+  , defaultResponseFormat
+  , defaultStreamOptions
+  , defaultWebSearchOptions
+  , defaultUserLocation
+  , defaultAudioConfig
+  , defaultToolChoice
+  , defaultSpecificToolChoice
+  , defaultReasoningEffort
+  , defaultFunction
   ) where
 
 import Conduit
@@ -844,3 +856,134 @@ createChatCompletionStream apiKey r OpenAIStreamHandler {..} = do
                       writeIORef bufferRef BS.empty -- Clear buffer after successful parse
                     Nothing -> return () -- Keep in buffer for next chunk
         else return () -- Ignore non-data lines
+
+data OpenAIParams = OpenAIParams
+  { frequencyPenalty :: Maybe Double
+  , logitBias :: Maybe (Map Text Double)
+  , logprobs :: Maybe Bool
+  , maxCompletionTokens :: Maybe Int
+  , maxTokens :: Maybe Int
+  , metadata :: Maybe (Map Text Text)
+  , modalities :: Maybe [Modality]
+  , n :: Maybe Int
+  , parallelToolCalls :: Maybe Bool
+  , prediction :: Maybe PredictionOutput
+  , presencePenalty :: Maybe Double
+  , reasoningEffort :: Maybe ReasoningEffort
+  , responseFormat :: Maybe ResponseFormat
+  , seed :: Maybe Int
+  , serviceTier :: Maybe Text
+  , stop :: Maybe (Either Text [Text])
+  , store :: Maybe Bool
+  , temperature :: Maybe Double
+  , toolChoice :: Maybe ToolChoice
+  , tools :: Maybe [Tool_]
+  , topLogprobs :: Maybe Int
+  , topP :: Maybe Double
+  , user :: Maybe Text
+  , webSearchOptions :: Maybe WebSearchOptions
+  , audio :: Maybe AudioConfig
+  }
+
+defaultPredictionOutput :: PredictionOutput
+defaultPredictionOutput =
+  PredictionOutput
+    { predictionType = "text"
+    , contentForPredictionOutput = StringContent ""
+    }
+
+defaultResponseFormat :: ResponseFormat
+defaultResponseFormat = JsonObjectFormat
+
+defaultStreamOptions :: StreamOptions
+defaultStreamOptions =
+  StreamOptions
+    { includeUsage = False
+    }
+
+defaultWebSearchOptions :: WebSearchOptions
+defaultWebSearchOptions =
+  WebSearchOptions
+    { searchContextSize = Nothing
+    , userLocation = Nothing
+    }
+
+defaultUserLocation :: UserLocation
+defaultUserLocation =
+  UserLocation
+    { approximate = ApproximateLocation {locationType = "approximate"}
+    }
+
+defaultAudioConfig :: AudioConfig
+defaultAudioConfig =
+  AudioConfig
+    { format = "mp3"
+    , voice = "en-US"
+    }
+
+defaultToolChoice :: ToolChoice
+defaultToolChoice = None
+
+defaultSpecificToolChoice :: SpecificToolChoice
+defaultSpecificToolChoice =
+  SpecificToolChoice
+    { toolType = "text"
+    , function = Null
+    }
+defaultReasoningEffort :: ReasoningEffort
+defaultReasoningEffort = Low
+
+defaultFunction :: Function_
+defaultFunction =
+  Function_
+    { name = "default_function"
+    , description = Nothing
+    , parameters = Nothing
+    , strict = Nothing
+    }
+
+-- defaultLogProbs :: LogProbs
+-- defaultLogProbs =
+--   LogProbs
+--     { contentForLogProbs = Nothing
+--     , refusal = Nothing
+--     }
+
+-- defaultLogProbContent :: LogProbContent
+-- defaultLogProbContent =
+--   LogProbContent
+--     { bytes = Nothing
+--     , logprob = 0.0
+--     , token = ""
+--     , topLogprobs = []
+--     }
+
+defaultOpenAIParams :: OpenAIParams
+defaultOpenAIParams =
+  OpenAIParams
+    { frequencyPenalty = Nothing
+    , logitBias = Nothing
+    , logprobs = Nothing
+    , maxCompletionTokens = Nothing
+    , maxTokens = Nothing
+    , metadata = Nothing
+    , modalities = Nothing
+    , n = Nothing
+    , parallelToolCalls = Nothing
+    , prediction = Nothing
+    , presencePenalty = Nothing
+    , reasoningEffort = Nothing
+    , responseFormat = Nothing
+    , seed = Nothing
+    , serviceTier = Nothing
+    , stop = Nothing
+    , store = Nothing
+    , temperature = Nothing
+    , toolChoice = Nothing
+    , tools = Nothing
+    , topLogprobs = Nothing
+    , topP = Nothing
+    , user = Nothing
+    , webSearchOptions = Nothing
+    , audio = Nothing
+    }

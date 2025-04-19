@@ -50,6 +50,7 @@ import Langchain.Callback (Callback)
 import qualified Langchain.LLM.Core as LLM
 import Langchain.LLM.Internal.OpenAI as OpenAI
 import qualified Langchain.LLM.Internal.OpenAI as O (OpenAIParams (..))
+import qualified Langchain.Runnable.Core as Run
 
 {- | Configuration for OpenAI's language models.
 
@@ -245,6 +246,11 @@ toOpenAIMessages msgs = map go (NE.toList msgs)
         , content = Just $ StringContent (LLM.content msg)
         }
 
+instance Run.Runnable OpenAI where
+  type RunnableInput OpenAI = LLM.ChatMessage 
+  type RunnableOutput OpenAI = Text
+
+  invoke model input = LLM.chat model input Nothing --TODO: Figure out a way to pass mbParams
 {-
 ghci> :set -XOverloadedStrings
 ghci> let o = OpenAI { apiKey = <my api key>

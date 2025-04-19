@@ -247,10 +247,11 @@ toOpenAIMessages msgs = map go (NE.toList msgs)
         }
 
 instance Run.Runnable OpenAI where
-  type RunnableInput OpenAI = LLM.ChatMessage 
+  type RunnableInput OpenAI = (LLM.ChatMessage, Maybe OpenAIParams)
   type RunnableOutput OpenAI = Text
 
-  invoke model input = LLM.chat model input Nothing --TODO: Figure out a way to pass mbParams
+  invoke = uncurry . LLM.chat 
+
 {-
 ghci> :set -XOverloadedStrings
 ghci> let o = OpenAI { apiKey = <my api key>

@@ -236,14 +236,10 @@ toOllamaMessages = NonEmpty.map $ \Message {..} ->
     toOllamaRole _ = OllamaChat.User -- Ollama only supports above 4 Roles, others will be defaulted to user
 
 instance Run.Runnable Ollama where
-  type RunnableInput Ollama = ChatMessage
+  type RunnableInput Ollama = (ChatMessage, Maybe OllamaParams)
   type RunnableOutput Ollama = Text
 
-  -- TODO: need to figure out a way to pass mbParams
-  -- \| Runnable interface implementation.
-  --  Currently delegates to 'chat' method with default parameters.
-  --
-  invoke model input = chat model input Nothing
+  invoke = uncurry . chat 
 
 -- | Default values for OllamaParams
 defaultOllamaParams :: OllamaParams

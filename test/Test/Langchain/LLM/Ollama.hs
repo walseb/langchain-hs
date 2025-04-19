@@ -111,7 +111,7 @@ tests =
     , testCase "invoke calls chat with the input messages" $ do
         let ollama = Ollama testModelName []
         let input = Message User "What is 2+2?" defaultMessageData :| []
-        result <- Run.invoke ollama input
+        result <- Run.invoke ollama (input, Nothing)
         case result of
           Left err -> assertFailure $ "Expected success, got error: " ++ err
           Right response -> assertBool "Should mention 4" ("4" `T.isInfixOf` T.toLower response)

@@ -11,7 +11,7 @@ License     : MIT
 Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
 Stability   : experimental
 
-OpenAI implementation of LangChain's LLM interface. You will have types and chatCompletionFunctions in 
+OpenAI implementation of LangChain's LLM interface. You will have types and chatCompletionFunctions in
   Internal module
 -}
 module Langchain.LLM.OpenAI
@@ -23,7 +23,7 @@ import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Text (Text)
 import Langchain.Callback (Callback)
 import qualified Langchain.LLM.Core as LLM
-import Langchain.LLM.Internal.OpenAI
+import Langchain.LLM.Internal.OpenAI as OpenAI
 
 data OpenAI = OpenAI
   { apiKey :: Text
@@ -44,7 +44,9 @@ instance LLM.LLM OpenAI where
         ( defaultChatCompletionRequest
             { model = openAIModelName
             , messages =
-                [ Message
+                [ defaultMessage { OpenAI.content = Just (StringContent prompt)}
+                {-
+                 Message
                     { role = User
                     , content = Just (StringContent prompt)
                     , name = Nothing
@@ -54,6 +56,7 @@ instance LLM.LLM OpenAI where
                     , audio = Nothing
                     , refusal = Nothing
                     }
+                    -}
                 ]
             }
         )
@@ -119,7 +122,7 @@ instance LLM.LLM OpenAI where
         case listToMaybe chunkChoices of
           Nothing -> ""
           Just ChunkChoice {..} ->
-            fromMaybe "" ((\Delta {..} -> content) delta)
+            fromMaybe "" ((\Delta {..} -> contentForDelta) delta)
 
 toOpenAIMessages :: LLM.ChatMessage -> [Message]
 toOpenAIMessages msgs = map go (NE.toList msgs)

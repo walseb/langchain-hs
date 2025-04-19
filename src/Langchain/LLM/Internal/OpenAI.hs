@@ -79,7 +79,7 @@ instance FromJSON ChunkChoice where
     ChunkChoice <$> v .: "delta" <*> v .:? "finish_reason"
 
 data Delta = Delta
-  { content :: Maybe Text
+  { contentForDelta :: Maybe Text
   }
   deriving (Show)
 
@@ -400,7 +400,7 @@ instance FromJSON ReasoningEffort where
   parseJSON invalid = fail $ "Invalid reasoning effort: " ++ show invalid
 
 data PredictionContent = PredictionContent
-  { content :: MessageContent
+  { contentForPredictionContent :: MessageContent
   , contentType :: Text
   }
   deriving (Show, Eq, Generic)
@@ -408,7 +408,7 @@ data PredictionContent = PredictionContent
 instance ToJSON PredictionContent where
   toJSON PredictionContent {..} =
     object
-      [ "content" .= content
+      [ "content" .= contentForPredictionContent
       , "type" .= contentType
       ]
 
@@ -420,7 +420,7 @@ instance FromJSON PredictionContent where
 
 data PredictionOutput = PredictionOutput
   { predictionType :: Text
-  , content :: MessageContent
+  , contentForPredictionOutput :: MessageContent
   }
   deriving (Show, Eq, Generic)
 
@@ -428,7 +428,7 @@ instance ToJSON PredictionOutput where
   toJSON PredictionOutput {..} =
     object
       [ "type" .= predictionType
-      , "content" .= content
+      , "content" .= contentForPredictionOutput
       ]
 
 instance FromJSON PredictionOutput where
@@ -632,7 +632,7 @@ instance FromJSON LogProbContent where
       <*> v .: "top_logprobs"
 
 data LogProbs = LogProbs
-  { content :: Maybe [LogProbContent]
+  { contentForLogProbs :: Maybe [LogProbContent]
   , refusal :: Maybe [LogProbContent]
   }
   deriving (Show, Eq, Generic)

@@ -21,8 +21,7 @@ For more information on OpenAI's API, see: <https://platform.openai.com/docs/api
 
 ### Example Usage
 
-**Text Generation:**
-```haskell
+@
 import Data.Text (Text)
 import qualified Langchain.LLM.Core as LLM
 import Langchain.LLM.OpenAI (OpenAI(..))
@@ -38,6 +37,7 @@ main = do
   case result of
     Left err -> putStrLn $ "Error: " ++ err
     Right response -> putStrLn response
+@
 -}
 module Langchain.LLM.OpenAI
   ( OpenAI (..)

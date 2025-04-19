@@ -245,7 +245,7 @@ instance Run.Runnable Ollama where
   --
   invoke model input = chat model input Nothing
 
--- Default values for OllamaParams
+-- | Default values for OllamaParams
 defaultOllamaParams :: OllamaParams
 defaultOllamaParams = OllamaParams
   { suffix = Nothing

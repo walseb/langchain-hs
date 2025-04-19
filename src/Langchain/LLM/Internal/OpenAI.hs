@@ -14,7 +14,8 @@ Stability   : experimental
 
 This module provides data types and functions to interact with OpenAI's chat completion API. It includes types for requests, responses, and streaming handlers, as well as functions to create and handle chat completion requests and streams. Designed for internal use within the LangChain library, it can also be used directly for fine-grained control over API interactions.
 
-### Key Features
+Key Features
+
 - Data types for chat completion requests and responses
 - Support for streaming chat completions with real-time token processing
 - Default values and configurations for common use cases
@@ -22,7 +23,6 @@ This module provides data types and functions to interact with OpenAI's chat com
 
 ### Example Usage
 
-**Creating a Chat Completion Request:**
 @
 import Data.Text (Text)
 import Langchain.LLM.Internal.OpenAI
@@ -44,7 +44,8 @@ case response of
   Left err -> putStrLn $ "Error: " ++ err
 @
 
-**Streaming Chat Completions:**
+- Streaming Chat Completions:
+
 @
 import Langchain.LLM.Internal.OpenAI
 
@@ -63,9 +64,12 @@ case result of
   Right () -> putStrLn "Streaming completed successfully"
   Left err -> putStrLn $ "Error: " ++ err
 @
+
 -}
 module Langchain.LLM.Internal.OpenAI
-  ( ChatCompletionChunk (..)
+  ( 
+    -- * Types
+    ChatCompletionChunk (..)
   , ChunkChoice (..)
   , Delta (..)
   , OpenAIStreamHandler (..)
@@ -101,6 +105,7 @@ module Langchain.LLM.Internal.OpenAI
   , CompletionTokensDetails (..)
   , PromptTokensDetails (..)
   , OpenAIParams (..)
+  -- * Default values for types
   , defaultChatCompletionRequest
   , createChatCompletion
   , createChatCompletionStream

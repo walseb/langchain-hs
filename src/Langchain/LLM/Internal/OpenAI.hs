@@ -1,13 +1,14 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Langchain.LLM.OpenAI.Types (
-        -- * Data Types
-   defaultChatCompletionRequest
-  , defaultMessage
+module Langchain.LLM.Internal.OpenAI
+  ( ChatCompletionChunk (..)
+  , ChunkChoice (..)
+  , Delta (..)
+  , OpenAIStreamHandler (..)
   , ChatCompletionRequest (..)
   , ChatCompletionResponse (..)
   , Message (..)
@@ -39,12 +40,52 @@ module Langchain.LLM.OpenAI.Types (
   , ApproximateLocation (..)
   , CompletionTokensDetails (..)
   , PromptTokensDetails (..)
-) where
+  , defaultChatCompletionRequest
+  , createChatCompletion
+  , createChatCompletionStream
+  , defaultMessage
+  ) where
 
+import Conduit
 import Data.Aeson
-import GHC.Generics
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import Data.IORef
 import Data.Map (Map)
 import Data.Text (Text)
+import Data.Text.Encoding (encodeUtf8)
+import GHC.Generics
+import Network.HTTP.Conduit
+import Network.HTTP.Simple
+import Network.HTTP.Types.Status (statusCode)
+
+data ChatCompletionChunk = ChatCompletionChunk
+  { chunkChoices :: [ChunkChoice]
+  }
+  deriving (Show)
+
+instance FromJSON ChatCompletionChunk where
+  parseJSON = withObject "ChatCompletionChunk" $ \v ->
+    ChatCompletionChunk <$> v .: "choices"
+
+data ChunkChoice = ChunkChoice
+  { delta :: Delta
+  , finishReason :: Maybe FinishReason
+  }
+  deriving (Show)
+
+instance FromJSON ChunkChoice where
+  parseJSON = withObject "ChunkChoice" $ \v ->
+    ChunkChoice <$> v .: "delta" <*> v .:? "finish_reason"
+
+data Delta = Delta
+  { content :: Maybe Text
+  }
+  deriving (Show)
+
+instance FromJSON Delta where
+  parseJSON = withObject "Delta" $ \v ->
+    Delta <$> v .:? "content"
 
 {- | Represents different roles in a conversation
 User: Human user input
@@ -724,3 +765,82 @@ defaultChatCompletionRequest =
     , webSearchOptions = Nothing
     , audio = Nothing
     }
+
+{- | Creates a chat completion request
+Sends the request to OpenAI API and returns the parsed response.
+
+Example usage:
+@
+response <- createChatCompletion "your-api-key" request
+case response of
+  Right res -> print (choices res)
+  Left err -> putStrLn err
+@
+-}
+createChatCompletion :: Text -> ChatCompletionRequest -> IO (Either String ChatCompletionResponse)
+createChatCompletion apiKey r = do
+  request_ <- parseRequest "https://api.openai.com/v1/chat/completions"
+  let req =
+        setRequestMethod "POST" $
+          setRequestSecure True $
+            setRequestHeader "Content-Type" ["application/json"] $
+              setRequestHeader "Authorization" ["Bearer " <> encodeUtf8 apiKey] $
+                setRequestBodyJSON r $
+                  request_
+
+  response <- httpLBS req
+  let status = statusCode $ getResponseStatus response
+  if status >= 200 && status < 300
+    then case eitherDecode (getResponseBody response) of
+      Left err -> return $ Left $ "JSON parse error: " <> err
+      Right completionResponse -> return $ Right completionResponse
+    else return $ Left $ "API error: " <> show status <> " " <> show (getResponseBody response)
+
+data OpenAIStreamHandler = OpenAIStreamHandler
+  { onToken :: ChatCompletionChunk -> IO ()
+  , onComplete :: IO ()
+  }
+
+createChatCompletionStream ::
+  Text -> ChatCompletionRequest -> OpenAIStreamHandler -> IO (Either String ())
+createChatCompletionStream apiKey r OpenAIStreamHandler {..} = do
+  request_ <- parseRequest "POST https://api.openai.com/v1/chat/completions"
+  let httpReq =
+        setRequestHeader "Authorization" ["Bearer " <> encodeUtf8 apiKey] $
+          setRequestHeader "Content-Type" ["application/json"] $
+            setRequestBodyJSON r $
+              request_
+
+  manager <- newManager tlsManagerSettings
+  runResourceT $ do
+    response <- http httpReq manager
+    bufferRef <- liftIO $ newIORef BS.empty
+    runConduit $
+      responseBody response
+        .| linesUnboundedAsciiC
+        .| mapM_C (liftIO . processLine bufferRef)
+
+  onComplete
+  return $ Right ()
+  where
+    processLine bufferRef line = do
+      if BS.isPrefixOf "data: " line
+        then do
+          if line == "data: [DONE]"
+            then return () -- Stream is complete
+            else do
+              let content = BS.drop 6 line -- Remove "data: " prefix
+              case decode (LBS.fromStrict content) of
+                Just chunk -> onToken chunk
+                Nothing -> do
+                  -- Handle potential partial JSON by buffering
+                  oldBuffer <- readIORef bufferRef
+                  let newBuffer = oldBuffer <> content
+                  writeIORef bufferRef newBuffer
+                  -- Try to parse the combined buffer
+                  case decode (LBS.fromStrict newBuffer) of
+                    Just chunk -> do
+                      onToken chunk
+                      writeIORef bufferRef BS.empty -- Clear buffer after successful parse
+                    Nothing -> return () -- Keep in buffer for next chunk
+        else return () -- Ignore non-data lines

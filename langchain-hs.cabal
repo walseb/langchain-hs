@@ -36,10 +36,9 @@ library
       Langchain.Embeddings.Core
       Langchain.Embeddings.Ollama
       Langchain.LLM.Core
+      Langchain.LLM.Internal.OpenAI
       Langchain.LLM.Ollama
       Langchain.LLM.OpenAI
-      Langchain.LLM.OpenAI.Stream
-      Langchain.LLM.OpenAI.Types
       Langchain.Memory.Core
       Langchain.OutputParser.Core
       Langchain.PromptTemplate

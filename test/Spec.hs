@@ -1,6 +1,7 @@
 import qualified Test.Langchain.Agent.Core as AgentTest
 import qualified Test.Langchain.Agent.ReactAgent as ReactAgentTest
 import qualified Test.Langchain.DocumentLoader.Core as DocumentLoaderTest
+import qualified Test.Langchain.DocumentLoader.DirectoryLoader as DirectoryLoaderTest
 import qualified Test.Langchain.Embeddings.Core as EmbeddingsTest
 import qualified Test.Langchain.LLM.Core as LLMCoreTest
 import qualified Test.Langchain.LLM.Ollama as OllamaLLMTest
@@ -28,6 +29,7 @@ main =
       , OutputParserTest.tests
       , TextSplitterTest.tests
       , DocumentLoaderTest.tests
+      , DirectoryLoaderTest.tests
       , MemoryTest.tests
       , VectorStoreTest.tests
       , EmbeddingsTest.tests

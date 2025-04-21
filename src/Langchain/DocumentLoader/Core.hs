@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {- |
 Module      : Langchain.DocumentLoader.Core
 Description : Core document loading functionality for LangChain Haskell
@@ -79,7 +80,7 @@ Document {pageContent = "AB", metadata = fromList [("x", Number 1), ("y", Bool T
 instance Semigroup Document where
   doc1 <> doc2 =
     Document
-      (pageContent doc1 <> pageContent doc2)
+      (pageContent doc1 <> "\n\n" <> pageContent doc2)
       (metadata doc1 <> metadata doc2)
 
 {- | Monoid instance provides empty document:

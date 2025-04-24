@@ -26,7 +26,7 @@ import Data.Text (Text)
 import qualified Langchain.LLM.Core as LLM
 import Langchain.LLM.OpenAI (OpenAI(..))
 
-main :: IO ()
+main :: IO()
 main = do
   let openAI = OpenAI
         { apiKey = "your-api-key"
@@ -41,15 +41,17 @@ main = do
 -}
 module Langchain.LLM.OpenAI
   ( OpenAI (..)
+  , OpenAIParams (..)
+  , defaultOpenAIParams
   ) where
 
 import qualified Data.List.NonEmpty as NE
+import Data.Map (Map)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Text (Text)
 import Langchain.Callback (Callback)
 import qualified Langchain.LLM.Core as LLM
-import Langchain.LLM.Internal.OpenAI as OpenAI
-import qualified Langchain.LLM.Internal.OpenAI as O (OpenAIParams (..))
+import qualified Langchain.LLM.Internal.OpenAI as OpenAI
 import qualified Langchain.Runnable.Core as Run
 
 {- | Configuration for OpenAI's language models.
@@ -80,177 +82,242 @@ instance LLM.LLM OpenAI where
 
   generate OpenAI {..} prompt mbOpenAIParams = do
     eRes <-
-      createChatCompletion
+      OpenAI.createChatCompletion
         apiKey
-        ( defaultChatCompletionRequest
-            { model = openAIModelName
-            , messages =
-                [defaultMessage {OpenAI.content = Just (StringContent prompt)}]
-            , frequencyPenalty = maybe Nothing O.frequencyPenalty mbOpenAIParams
-            , logitBias = maybe Nothing O.logitBias mbOpenAIParams
-            , logprobs = maybe Nothing O.logprobs mbOpenAIParams
-            , maxCompletionTokens = maybe Nothing O.maxCompletionTokens mbOpenAIParams
-            , maxTokens = maybe Nothing O.maxTokens mbOpenAIParams
-            , metadata = maybe Nothing O.metadata mbOpenAIParams
-            , modalities = maybe Nothing O.modalities mbOpenAIParams
-            , n = maybe Nothing O.n mbOpenAIParams
-            , parallelToolCalls = maybe Nothing O.parallelToolCalls mbOpenAIParams
-            , prediction = maybe Nothing O.prediction mbOpenAIParams
-            , presencePenalty = maybe Nothing O.presencePenalty mbOpenAIParams
-            , reasoningEffort = maybe Nothing O.reasoningEffort mbOpenAIParams
-            , responseFormat = maybe Nothing O.responseFormat mbOpenAIParams
-            , seed = maybe Nothing O.seed mbOpenAIParams
-            , serviceTier = maybe Nothing O.serviceTier mbOpenAIParams
-            , stop = maybe Nothing O.stop mbOpenAIParams
-            , store = maybe Nothing O.store mbOpenAIParams
-            , temperature = maybe Nothing O.temperature mbOpenAIParams
-            , toolChoice = maybe Nothing O.toolChoice mbOpenAIParams
-            , tools = maybe Nothing O.tools mbOpenAIParams
-            , topLogprobs = maybe Nothing O.topLogprobs mbOpenAIParams
-            , topP = maybe Nothing O.topP mbOpenAIParams
-            , user = maybe Nothing O.user mbOpenAIParams
-            , webSearchOptions = maybe Nothing O.webSearchOptions mbOpenAIParams
-            , audio = maybe Nothing O.audio mbOpenAIParams
+        ( OpenAI.defaultChatCompletionRequest
+            { OpenAI.model = openAIModelName
+            , OpenAI.messages =
+                [OpenAI.defaultMessage {OpenAI.content = Just (OpenAI.StringContent prompt)}]
+            , OpenAI.timeout = maybe Nothing timeout mbOpenAIParams
+            , OpenAI.frequencyPenalty = maybe Nothing frequencyPenalty mbOpenAIParams
+            , OpenAI.logitBias = maybe Nothing logitBias mbOpenAIParams
+            , OpenAI.logprobs = maybe Nothing logprobs mbOpenAIParams
+            , OpenAI.maxCompletionTokens = maybe Nothing maxCompletionTokens mbOpenAIParams
+            , OpenAI.maxTokens = maybe Nothing maxTokens mbOpenAIParams
+            , OpenAI.metadata = maybe Nothing metadata mbOpenAIParams
+            , OpenAI.modalities = maybe Nothing modalities mbOpenAIParams
+            , OpenAI.n = maybe Nothing n mbOpenAIParams
+            , OpenAI.parallelToolCalls = maybe Nothing parallelToolCalls mbOpenAIParams
+            , OpenAI.prediction = maybe Nothing prediction mbOpenAIParams
+            , OpenAI.presencePenalty = maybe Nothing presencePenalty mbOpenAIParams
+            , OpenAI.reasoningEffort = maybe Nothing reasoningEffort mbOpenAIParams
+            , OpenAI.responseFormat = maybe Nothing responseFormat mbOpenAIParams
+            , OpenAI.seed = maybe Nothing seed mbOpenAIParams
+            , OpenAI.serviceTier = maybe Nothing serviceTier mbOpenAIParams
+            , OpenAI.stop = maybe Nothing stop mbOpenAIParams
+            , OpenAI.store = maybe Nothing store mbOpenAIParams
+            , OpenAI.temperature = maybe Nothing temperature mbOpenAIParams
+            , OpenAI.toolChoice = maybe Nothing toolChoice mbOpenAIParams
+            , OpenAI.tools = maybe Nothing tools mbOpenAIParams
+            , OpenAI.topLogprobs = maybe Nothing topLogprobs mbOpenAIParams
+            , OpenAI.topP = maybe Nothing topP mbOpenAIParams
+            , OpenAI.user = maybe Nothing user mbOpenAIParams
+            , OpenAI.webSearchOptions = maybe Nothing webSearchOptions mbOpenAIParams
+            , OpenAI.audio = maybe Nothing audio mbOpenAIParams
             }
         )
     case eRes of
       Left err -> return $ Left err
       Right r -> do
-        case listToMaybe ((\ChatCompletionResponse {..} -> choices) r) of
+        case listToMaybe ((\OpenAI.ChatCompletionResponse {..} -> choices) r) of
           Nothing -> return $ Left "Did not received any response"
           Just resp ->
-            let Message {..} = message resp
+            let OpenAI.Message {..} = OpenAI.message resp
              in pure $
                   Right $
                     maybe
                       ""
                       ( \c -> case c of
-                          StringContent t -> t
-                          ContentParts _ -> ""
+                          OpenAI.StringContent t -> t
+                          OpenAI.ContentParts _ -> ""
                       )
                       content
   chat OpenAI {..} msgs mbOpenAIParams = do
     eRes <-
-      createChatCompletion
+      OpenAI.createChatCompletion
         apiKey
-        ( defaultChatCompletionRequest
-            { model = openAIModelName
-            , messages = toOpenAIMessages msgs
-            , frequencyPenalty = maybe Nothing O.frequencyPenalty mbOpenAIParams
-            , logitBias = maybe Nothing O.logitBias mbOpenAIParams
-            , logprobs = maybe Nothing O.logprobs mbOpenAIParams
-            , maxCompletionTokens = maybe Nothing O.maxCompletionTokens mbOpenAIParams
-            , maxTokens = maybe Nothing O.maxTokens mbOpenAIParams
-            , metadata = maybe Nothing O.metadata mbOpenAIParams
-            , modalities = maybe Nothing O.modalities mbOpenAIParams
-            , n = maybe Nothing O.n mbOpenAIParams
-            , parallelToolCalls = maybe Nothing O.parallelToolCalls mbOpenAIParams
-            , prediction = maybe Nothing O.prediction mbOpenAIParams
-            , presencePenalty = maybe Nothing O.presencePenalty mbOpenAIParams
-            , reasoningEffort = maybe Nothing O.reasoningEffort mbOpenAIParams
-            , responseFormat = maybe Nothing O.responseFormat mbOpenAIParams
-            , seed = maybe Nothing O.seed mbOpenAIParams
-            , serviceTier = maybe Nothing O.serviceTier mbOpenAIParams
-            , stop = maybe Nothing O.stop mbOpenAIParams
-            , store = maybe Nothing O.store mbOpenAIParams
-            , temperature = maybe Nothing O.temperature mbOpenAIParams
-            , toolChoice = maybe Nothing O.toolChoice mbOpenAIParams
-            , tools = maybe Nothing O.tools mbOpenAIParams
-            , topLogprobs = maybe Nothing O.topLogprobs mbOpenAIParams
-            , topP = maybe Nothing O.topP mbOpenAIParams
-            , user = maybe Nothing O.user mbOpenAIParams
-            , webSearchOptions = maybe Nothing O.webSearchOptions mbOpenAIParams
-            , audio = maybe Nothing O.audio mbOpenAIParams
+        ( OpenAI.defaultChatCompletionRequest
+            { OpenAI.model = openAIModelName
+            , OpenAI.messages = toOpenAIMessages msgs
+            , OpenAI.timeout = maybe Nothing timeout mbOpenAIParams
+            , OpenAI.frequencyPenalty = maybe Nothing frequencyPenalty mbOpenAIParams
+            , OpenAI.logitBias = maybe Nothing logitBias mbOpenAIParams
+            , OpenAI.logprobs = maybe Nothing logprobs mbOpenAIParams
+            , OpenAI.maxCompletionTokens = maybe Nothing maxCompletionTokens mbOpenAIParams
+            , OpenAI.maxTokens = maybe Nothing maxTokens mbOpenAIParams
+            , OpenAI.metadata = maybe Nothing metadata mbOpenAIParams
+            , OpenAI.modalities = maybe Nothing modalities mbOpenAIParams
+            , OpenAI.n = maybe Nothing n mbOpenAIParams
+            , OpenAI.parallelToolCalls = maybe Nothing parallelToolCalls mbOpenAIParams
+            , OpenAI.prediction = maybe Nothing prediction mbOpenAIParams
+            , OpenAI.presencePenalty = maybe Nothing presencePenalty mbOpenAIParams
+            , OpenAI.reasoningEffort = maybe Nothing reasoningEffort mbOpenAIParams
+            , OpenAI.responseFormat = maybe Nothing responseFormat mbOpenAIParams
+            , OpenAI.seed = maybe Nothing seed mbOpenAIParams
+            , OpenAI.serviceTier = maybe Nothing serviceTier mbOpenAIParams
+            , OpenAI.stop = maybe Nothing stop mbOpenAIParams
+            , OpenAI.store = maybe Nothing store mbOpenAIParams
+            , OpenAI.temperature = maybe Nothing temperature mbOpenAIParams
+            , OpenAI.toolChoice = maybe Nothing toolChoice mbOpenAIParams
+            , OpenAI.tools = maybe Nothing tools mbOpenAIParams
+            , OpenAI.topLogprobs = maybe Nothing topLogprobs mbOpenAIParams
+            , OpenAI.topP = maybe Nothing topP mbOpenAIParams
+            , OpenAI.user = maybe Nothing user mbOpenAIParams
+            , OpenAI.webSearchOptions = maybe Nothing webSearchOptions mbOpenAIParams
+            , OpenAI.audio = maybe Nothing audio mbOpenAIParams
             }
         )
     case eRes of
       Left err -> return $ Left err
       Right r -> do
-        case listToMaybe ((\ChatCompletionResponse {..} -> choices) r) of
+        case listToMaybe ((\OpenAI.ChatCompletionResponse {..} -> choices) r) of
           Nothing -> return $ Left "Did not received any response"
           Just resp ->
-            let Message {..} = message resp
+            let OpenAI.Message {..} = OpenAI.message resp
              in pure $
                   Right $
                     maybe
                       ""
                       ( \c -> case c of
-                          StringContent t -> t
-                          ContentParts _ -> ""
+                          OpenAI.StringContent t -> t
+                          OpenAI.ContentParts _ -> ""
                       )
                       content
 
   stream OpenAI {..} msgs LLM.StreamHandler {onComplete, onToken} mbOpenAIParams = do
     let req =
-          defaultChatCompletionRequest
-            { model = openAIModelName
-            , messages = toOpenAIMessages msgs
-            , stream = Just True -- Enable streaming
-            , frequencyPenalty = maybe Nothing O.frequencyPenalty mbOpenAIParams
-            , logitBias = maybe Nothing O.logitBias mbOpenAIParams
-            , logprobs = maybe Nothing O.logprobs mbOpenAIParams
-            , maxCompletionTokens = maybe Nothing O.maxCompletionTokens mbOpenAIParams
-            , maxTokens = maybe Nothing O.maxTokens mbOpenAIParams
-            , metadata = maybe Nothing O.metadata mbOpenAIParams
-            , modalities = maybe Nothing O.modalities mbOpenAIParams
-            , n = maybe Nothing O.n mbOpenAIParams
-            , parallelToolCalls = maybe Nothing O.parallelToolCalls mbOpenAIParams
-            , prediction = maybe Nothing O.prediction mbOpenAIParams
-            , presencePenalty = maybe Nothing O.presencePenalty mbOpenAIParams
-            , reasoningEffort = maybe Nothing O.reasoningEffort mbOpenAIParams
-            , responseFormat = maybe Nothing O.responseFormat mbOpenAIParams
-            , seed = maybe Nothing O.seed mbOpenAIParams
-            , serviceTier = maybe Nothing O.serviceTier mbOpenAIParams
-            , stop = maybe Nothing O.stop mbOpenAIParams
-            , store = maybe Nothing O.store mbOpenAIParams
-            , temperature = maybe Nothing O.temperature mbOpenAIParams
-            , toolChoice = maybe Nothing O.toolChoice mbOpenAIParams
-            , tools = maybe Nothing O.tools mbOpenAIParams
-            , topLogprobs = maybe Nothing O.topLogprobs mbOpenAIParams
-            , topP = maybe Nothing O.topP mbOpenAIParams
-            , user = maybe Nothing O.user mbOpenAIParams
-            , webSearchOptions = maybe Nothing O.webSearchOptions mbOpenAIParams
-            , audio = maybe Nothing O.audio mbOpenAIParams
+          OpenAI.defaultChatCompletionRequest
+            { OpenAI.model = openAIModelName
+            , OpenAI.messages = toOpenAIMessages msgs
+            , OpenAI.stream = Just True -- Enable streaming'
+            , OpenAI.timeout = maybe Nothing timeout mbOpenAIParams
+            , OpenAI.frequencyPenalty = maybe Nothing frequencyPenalty mbOpenAIParams
+            , OpenAI.logitBias = maybe Nothing logitBias mbOpenAIParams
+            , OpenAI.logprobs = maybe Nothing logprobs mbOpenAIParams
+            , OpenAI.maxCompletionTokens = maybe Nothing maxCompletionTokens mbOpenAIParams
+            , OpenAI.maxTokens = maybe Nothing maxTokens mbOpenAIParams
+            , OpenAI.metadata = maybe Nothing metadata mbOpenAIParams
+            , OpenAI.modalities = maybe Nothing modalities mbOpenAIParams
+            , OpenAI.n = maybe Nothing n mbOpenAIParams
+            , OpenAI.parallelToolCalls = maybe Nothing parallelToolCalls mbOpenAIParams
+            , OpenAI.prediction = maybe Nothing prediction mbOpenAIParams
+            , OpenAI.presencePenalty = maybe Nothing presencePenalty mbOpenAIParams
+            , OpenAI.reasoningEffort = maybe Nothing reasoningEffort mbOpenAIParams
+            , OpenAI.responseFormat = maybe Nothing responseFormat mbOpenAIParams
+            , OpenAI.seed = maybe Nothing seed mbOpenAIParams
+            , OpenAI.serviceTier = maybe Nothing serviceTier mbOpenAIParams
+            , OpenAI.stop = maybe Nothing stop mbOpenAIParams
+            , OpenAI.store = maybe Nothing store mbOpenAIParams
+            , OpenAI.temperature = maybe Nothing temperature mbOpenAIParams
+            , OpenAI.toolChoice = maybe Nothing toolChoice mbOpenAIParams
+            , OpenAI.tools = maybe Nothing tools mbOpenAIParams
+            , OpenAI.topLogprobs = maybe Nothing topLogprobs mbOpenAIParams
+            , OpenAI.topP = maybe Nothing topP mbOpenAIParams
+            , OpenAI.user = maybe Nothing user mbOpenAIParams
+            , OpenAI.webSearchOptions = maybe Nothing webSearchOptions mbOpenAIParams
+            , OpenAI.audio = maybe Nothing audio mbOpenAIParams
             }
-    createChatCompletionStream
+    OpenAI.createChatCompletionStream
       apiKey
       req
-      OpenAIStreamHandler
-        { onComplete = onComplete
-        , onToken = onToken . chunkToText
+      OpenAI.OpenAIStreamHandler
+        { OpenAI.onComplete = onComplete
+        , OpenAI.onToken = onToken . chunkToText
         }
     where
-      chunkToText :: ChatCompletionChunk -> Text
-      chunkToText ChatCompletionChunk {..} = do
+      chunkToText :: OpenAI.ChatCompletionChunk -> Text
+      chunkToText OpenAI.ChatCompletionChunk {..} = do
         case listToMaybe chunkChoices of
           Nothing -> ""
-          Just ChunkChoice {..} ->
-            fromMaybe "" ((\Delta {..} -> contentForDelta) delta)
+          Just OpenAI.ChunkChoice {..} ->
+            fromMaybe "" ((\OpenAI.Delta {..} -> contentForDelta) delta)
 
-toOpenAIMessages :: LLM.ChatMessage -> [Message]
+toOpenAIMessages :: LLM.ChatMessage -> [OpenAI.Message]
 toOpenAIMessages msgs = map go (NE.toList msgs)
   where
-    toRole :: LLM.Role -> Role
+    toRole :: LLM.Role -> OpenAI.Role
     toRole r = case r of
-      LLM.System -> System
-      LLM.User -> User
-      LLM.Assistant -> Assistant
-      LLM.Tool -> Tool
-      LLM.Developer -> Developer
-      LLM.Function -> Function
+      LLM.System -> OpenAI.System
+      LLM.User -> OpenAI.User
+      LLM.Assistant -> OpenAI.Assistant
+      LLM.Tool -> OpenAI.Tool
+      LLM.Developer -> OpenAI.Developer
+      LLM.Function -> OpenAI.Function
 
-    go :: LLM.Message -> Message
+    go :: LLM.Message -> OpenAI.Message
     go msg =
-      defaultMessage
-        { role = toRole $ LLM.role msg
-        , content = Just $ StringContent (LLM.content msg)
+      OpenAI.defaultMessage
+        { OpenAI.role = toRole $ LLM.role msg
+        , OpenAI.content = Just $ OpenAI.StringContent (LLM.content msg)
         }
 
 instance Run.Runnable OpenAI where
   type RunnableInput OpenAI = (LLM.ChatMessage, Maybe OpenAIParams)
   type RunnableOutput OpenAI = Text
 
-  invoke = uncurry . LLM.chat 
+  invoke = uncurry . LLM.chat
+
+-- | Parameters for customizing OpenAI API calls.
+data OpenAIParams = OpenAIParams
+  { timeout :: Maybe Int
+  , frequencyPenalty :: Maybe Double
+  , logitBias :: Maybe (Map Text Double)
+  , logprobs :: Maybe Bool
+  , maxCompletionTokens :: Maybe Int
+  , maxTokens :: Maybe Int
+  , metadata :: Maybe (Map Text Text)
+  , modalities :: Maybe [OpenAI.Modality]
+  , n :: Maybe Int
+  , parallelToolCalls :: Maybe Bool
+  , prediction :: Maybe OpenAI.PredictionOutput
+  , presencePenalty :: Maybe Double
+  , reasoningEffort :: Maybe OpenAI.ReasoningEffort
+  , responseFormat :: Maybe OpenAI.ResponseFormat
+  , seed :: Maybe Int
+  , serviceTier :: Maybe Text
+  , stop :: Maybe (Either Text [Text])
+  , store :: Maybe Bool
+  , temperature :: Maybe Double
+  , toolChoice :: Maybe OpenAI.ToolChoice
+  , tools :: Maybe [OpenAI.Tool_]
+  , topLogprobs :: Maybe Int
+  , topP :: Maybe Double
+  , user :: Maybe Text
+  , webSearchOptions :: Maybe OpenAI.WebSearchOptions
+  , audio :: Maybe OpenAI.AudioConfig
+  }
+
+-- | Default parameters for OpenAI API calls.
+defaultOpenAIParams :: OpenAIParams
+defaultOpenAIParams =
+  OpenAIParams
+    { timeout = Just 60
+    , frequencyPenalty = Nothing
+    , logitBias = Nothing
+    , logprobs = Nothing
+    , maxCompletionTokens = Nothing
+    , maxTokens = Nothing
+    , metadata = Nothing
+    , modalities = Nothing
+    , n = Nothing
+    , parallelToolCalls = Nothing
+    , prediction = Nothing
+    , presencePenalty = Nothing
+    , reasoningEffort = Nothing
+    , responseFormat = Nothing
+    , seed = Nothing
+    , serviceTier = Nothing
+    , stop = Nothing
+    , store = Nothing
+    , temperature = Nothing
+    , toolChoice = Nothing
+    , tools = Nothing
+    , topLogprobs = Nothing
+    , topP = Nothing
+    , user = Nothing
+    , webSearchOptions = Nothing
+    , audio = Nothing
+    }
 
 {-
 ghci> :set -XOverloadedStrings

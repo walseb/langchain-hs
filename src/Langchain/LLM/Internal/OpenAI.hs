@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -64,11 +63,9 @@ case result of
   Right () -> putStrLn "Streaming completed successfully"
   Left err -> putStrLn $ "Error: " ++ err
 @
-
 -}
 module Langchain.LLM.Internal.OpenAI
-  ( 
-    -- * Types
+  ( -- * Types
     ChatCompletionChunk (..)
   , ChunkChoice (..)
   , Delta (..)
@@ -104,13 +101,12 @@ module Langchain.LLM.Internal.OpenAI
   , ApproximateLocation (..)
   , CompletionTokensDetails (..)
   , PromptTokensDetails (..)
-  , OpenAIParams (..)
-  -- * Default values for types
+
+    -- * Default values for types
   , defaultChatCompletionRequest
   , createChatCompletion
   , createChatCompletionStream
   , defaultMessage
-  , defaultOpenAIParams
   , defaultPredictionOutput
   , defaultResponseFormat
   , defaultStreamOptions
@@ -129,11 +125,19 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.IORef
 import Data.Map (Map)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import GHC.Generics
 import Network.HTTP.Conduit
 import Network.HTTP.Simple
+  ( getResponseStatus
+  , setRequestBodyJSON
+  , setRequestHeader
+  , setRequestMethod
+  , setRequestSecure
+  , getResponseBody
+  )
 import Network.HTTP.Types.Status (statusCode)
 
 {- | Represents a chunk of the chat completion response in a streaming context.
@@ -193,6 +197,8 @@ data ChatCompletionRequest = ChatCompletionRequest
   -- ^ List of messages in the conversation history
   , model :: Text
   -- ^ The model to use for completion (e.g., "gpt-3.5-turbo")
+  , timeout :: Maybe Int
+  -- ^ Override default response timeout in seconds. Default = 60 seconds
   , frequencyPenalty :: Maybe Double
   -- ^ Penalty for frequent tokens (range: -2.0 to 2.0)
   , logitBias :: Maybe (Map Text Double)
@@ -298,7 +304,7 @@ data ChatCompletionResponse = ChatCompletionResponse
   -- ^ The model used for the completion
   , object_ :: Text
   -- ^ Type of the response object
-  , serviceTier :: Maybe Text
+  , responseServiceTier :: Maybe Text
   -- ^ Service tier used
   , systemFingerprint :: Text
   -- ^ System fingerprint
@@ -333,9 +339,9 @@ data Message = Message
   -- ^ Optional function call information
   , toolCalls :: Maybe [ToolCall]
   -- ^ Optional tool call information
-  , toolCallId :: Maybe Text
+  , messageToolCallId :: Maybe Text
   -- ^ Optional tool call ID
-  , audio :: Maybe AudioResponse
+  , messageAudio :: Maybe AudioResponse
   -- ^ Optional audio response
   , refusal :: Maybe Text
   -- ^ Optional refusal reason
@@ -351,8 +357,8 @@ defaultMessage =
     , name = Nothing
     , functionCall = Nothing
     , toolCalls = Nothing
-    , toolCallId = Nothing
-    , audio = Nothing
+    , messageToolCallId = Nothing
+    , messageAudio = Nothing
     , refusal = Nothing
     }
 
@@ -364,8 +370,8 @@ instance ToJSON Message where
         ++ maybe [] (\n -> ["name" .= n]) name
         ++ maybe [] (\fc -> ["function_call" .= fc]) functionCall
         ++ maybe [] (\tc -> ["tool_calls" .= tc]) toolCalls
-        ++ maybe [] (\tcid -> ["tool_call_id" .= tcid]) toolCallId
-        ++ maybe [] (\a -> ["audio" .= a]) audio
+        ++ maybe [] (\tcid -> ["tool_call_id" .= tcid]) messageToolCallId
+        ++ maybe [] (\a -> ["audio" .= a]) messageAudio
         ++ maybe [] (\r -> ["refusal" .= r]) refusal
 
 instance FromJSON Message where
@@ -478,7 +484,7 @@ instance FromJSON Tool_ where
 
 -- | Represents a function that can be called by the model.
 data Function_ = Function_
-  { name :: Text
+  { functionName :: Text
   -- ^ The name of the function
   , description :: Maybe Text
   -- ^ Optional description of the function
@@ -492,7 +498,7 @@ data Function_ = Function_
 instance ToJSON Function_ where
   toJSON Function_ {..} =
     object $
-      [ "name" .= name
+      [ "name" .= functionName
       ]
         ++ maybe [] (\d -> ["description" .= d]) description
         ++ maybe [] (\p -> ["parameters" .= p]) parameters
@@ -508,11 +514,11 @@ instance FromJSON Function_ where
 
 -- | Represents a call to a tool.
 data ToolCall = ToolCall
-  { id_ :: Text
+  { toolCallId :: Text
   -- ^ The ID of the tool call
-  , toolType :: Text
+  , toolCallToolType :: Text
   -- ^ The type of the tool
-  , function :: FunctionCall_
+  , toolCallfunction :: FunctionCall_
   -- ^ The function call
   }
   deriving (Show, Eq, Generic)
@@ -520,9 +526,9 @@ data ToolCall = ToolCall
 instance ToJSON ToolCall where
   toJSON ToolCall {..} =
     object
-      [ "id" .= id_
-      , "type" .= toolType
-      , "function" .= function
+      [ "id" .= toolCallId
+      , "type" .= toolCallToolType
+      , "function" .= toolCallfunction
       ]
 
 instance FromJSON ToolCall where
@@ -534,7 +540,7 @@ instance FromJSON ToolCall where
 
 -- | Represents a call to a function.
 data FunctionCall_ = FunctionCall_
-  { name :: Text
+  { functionCallName :: Text
   -- ^ The name of the function
   , arguments :: Text
   -- ^ The arguments for the function
@@ -544,7 +550,7 @@ data FunctionCall_ = FunctionCall_
 instance ToJSON FunctionCall_ where
   toJSON FunctionCall_ {..} =
     object
-      [ "name" .= name
+      [ "name" .= functionCallName
       , "arguments" .= arguments
       ]
 
@@ -580,11 +586,11 @@ instance FromJSON Usage where
 
 -- | Represents a single choice in the chat completion response.
 data Choice = Choice
-  { finishReason :: Maybe FinishReason
+  { choiceFinishReason :: Maybe FinishReason
   -- ^ Reason why the completion stopped
   , index :: Int
   -- ^ Index of the choice
-  , logprobs :: Maybe LogProbs
+  , choiceLogprobs :: Maybe LogProbs
   -- ^ Log probabilities, if requested
   , message :: Message
   -- ^ The generated message
@@ -615,7 +621,7 @@ instance FromJSON FinishReason where
 data LogProbs = LogProbs
   { contentForLogProbs :: Maybe [LogProbContent]
   -- ^ Log probs for content
-  , refusal :: Maybe [LogProbContent]
+  , logProbsRefusal :: Maybe [LogProbContent]
   -- ^ Log probs for refusal
   }
   deriving (Show, Eq, Generic)
@@ -634,7 +640,7 @@ data LogProbContent = LogProbContent
   -- ^ Log probability of the token
   , token :: Text
   -- ^ The token
-  , topLogprobs :: [TopLogProb]
+  , logProbContentTopLogprobs :: [TopLogProb]
   -- ^ Top log probabilities
   }
   deriving (Show, Eq, Generic)
@@ -649,11 +655,11 @@ instance FromJSON LogProbContent where
 
 -- | Represents a top log probability for a token.
 data TopLogProb = TopLogProb
-  { bytes :: Maybe [Int]
+  { topLogProbBytes :: Maybe [Int]
   -- ^ Optional byte representation
-  , logprob :: Double
+  , topLogProbLogprob :: Double
   -- ^ Log probability
-  , token :: Text
+  , topLogProbToken :: Text
   -- ^ The token
   }
   deriving (Show, Eq, Generic)
@@ -691,11 +697,11 @@ instance FromJSON AudioConfig where
 
 -- | Represents an audio response.
 data AudioResponse = AudioResponse
-  { data_ :: Text
+  { audioResponseData :: Text
   -- ^ Audio data
   , expiresAt :: Integer
   -- ^ Expiration time
-  , id_ :: Text
+  , audioResponseId :: Text
   -- ^ Unique ID
   , transcript :: Text
   -- ^ Transcript of the audio
@@ -705,9 +711,9 @@ data AudioResponse = AudioResponse
 instance ToJSON AudioResponse where
   toJSON AudioResponse {..} =
     object
-      [ "data" .= data_
+      [ "data" .= audioResponseData
       , "expires_at" .= expiresAt
-      , "id" .= id_
+      , "id" .= audioResponseId
       , "transcript" .= transcript
       ]
 
@@ -751,9 +757,9 @@ instance FromJSON ToolChoice where
 
 -- | Provides details for a specific tool choice.
 data SpecificToolChoice = SpecificToolChoice
-  { toolType :: Text
+  { specificToolChoiceToolType :: Text
   -- ^ Type of the tool
-  , function :: Value
+  , specificToolChoiceFunction :: Value
   -- ^ Function details
   }
   deriving (Show, Eq, Generic)
@@ -761,8 +767,8 @@ data SpecificToolChoice = SpecificToolChoice
 instance ToJSON SpecificToolChoice where
   toJSON SpecificToolChoice {..} =
     object
-      [ "type" .= toolType
-      , "function" .= function
+      [ "type" .= specificToolChoiceToolType
+      , "function" .= specificToolChoiceFunction
       ]
 
 instance FromJSON SpecificToolChoice where
@@ -790,7 +796,7 @@ instance FromJSON ReasoningEffort where
 data PredictionContent = PredictionContent
   { contentForPredictionContent :: MessageContent
   -- ^ The content
-  , contentType :: Text
+  , predictionContentType :: Text
   -- ^ Type of the content
   }
   deriving (Show, Eq, Generic)
@@ -799,7 +805,7 @@ instance ToJSON PredictionContent where
   toJSON PredictionContent {..} =
     object
       [ "content" .= contentForPredictionContent
-      , "type" .= contentType
+      , "type" .= predictionContentType
       ]
 
 instance FromJSON PredictionContent where
@@ -945,7 +951,7 @@ instance FromJSON CompletionTokensDetails where
 
 -- | Details about prompt tokens.
 data PromptTokensDetails = PromptTokensDetails
-  { audioTokens :: Int
+  { promptTokenDetailsAudioTokens :: Int
   -- ^ Audio tokens in the prompt
   , cachedTokens :: Int
   -- ^ Cached tokens
@@ -958,41 +964,13 @@ instance FromJSON PromptTokensDetails where
       <$> v .: "audio_tokens"
       <*> v .: "cached_tokens"
 
--- | Parameters for customizing OpenAI API calls.
-data OpenAIParams = OpenAIParams
-  { frequencyPenalty :: Maybe Double
-  , logitBias :: Maybe (Map Text Double)
-  , logprobs :: Maybe Bool
-  , maxCompletionTokens :: Maybe Int
-  , maxTokens :: Maybe Int
-  , metadata :: Maybe (Map Text Text)
-  , modalities :: Maybe [Modality]
-  , n :: Maybe Int
-  , parallelToolCalls :: Maybe Bool
-  , prediction :: Maybe PredictionOutput
-  , presencePenalty :: Maybe Double
-  , reasoningEffort :: Maybe ReasoningEffort
-  , responseFormat :: Maybe ResponseFormat
-  , seed :: Maybe Int
-  , serviceTier :: Maybe Text
-  , stop :: Maybe (Either Text [Text])
-  , store :: Maybe Bool
-  , temperature :: Maybe Double
-  , toolChoice :: Maybe ToolChoice
-  , tools :: Maybe [Tool_]
-  , topLogprobs :: Maybe Int
-  , topP :: Maybe Double
-  , user :: Maybe Text
-  , webSearchOptions :: Maybe WebSearchOptions
-  , audio :: Maybe AudioConfig
-  }
-
 -- | Default chat completion request with "gpt-4.1-nano" model.
 defaultChatCompletionRequest :: ChatCompletionRequest
 defaultChatCompletionRequest =
   ChatCompletionRequest
     { messages = []
     , model = "gpt-4.1-nano"
+    , timeout = Just 60
     , frequencyPenalty = Nothing
     , logitBias = Nothing
     , logprobs = Nothing
@@ -1028,6 +1006,12 @@ Sends the request to OpenAI's API and parses the response.
 createChatCompletion :: Text -> ChatCompletionRequest -> IO (Either String ChatCompletionResponse)
 createChatCompletion apiKey r = do
   request_ <- parseRequest "https://api.openai.com/v1/chat/completions"
+  manager <-
+    newManager
+      tlsManagerSettings
+        { managerResponseTimeout =
+            responseTimeoutMicro (fromMaybe 60 (timeout r) * 1000000)
+        }
   let req =
         setRequestMethod "POST" $
           setRequestSecure True $
@@ -1036,7 +1020,7 @@ createChatCompletion apiKey r = do
                 setRequestBodyJSON r $
                   request_
 
-  response <- httpLBS req
+  response <- httpLbs req manager
   let status = statusCode $ getResponseStatus response
   if status >= 200 && status < 300
     then case eitherDecode (getResponseBody response) of
@@ -1057,7 +1041,12 @@ createChatCompletionStream apiKey r OpenAIStreamHandler {..} = do
             setRequestBodyJSON r $
               request_
 
-  manager <- newManager tlsManagerSettings
+  manager <-
+    newManager
+      tlsManagerSettings
+        { managerResponseTimeout =
+            responseTimeoutMicro (fromMaybe 60 (timeout r) * 1000000)
+        }
   runResourceT $ do
     response <- http httpReq manager
     bufferRef <- liftIO $ newIORef BS.empty
@@ -1090,37 +1079,6 @@ createChatCompletionStream apiKey r OpenAIStreamHandler {..} = do
                       writeIORef bufferRef BS.empty -- Clear buffer after successful parse
                     Nothing -> return () -- Keep in buffer for next chunk
         else return () -- Ignore non-data lines
-
--- | Default parameters for OpenAI API calls.
-defaultOpenAIParams :: OpenAIParams
-defaultOpenAIParams =
-  OpenAIParams
-    { frequencyPenalty = Nothing
-    , logitBias = Nothing
-    , logprobs = Nothing
-    , maxCompletionTokens = Nothing
-    , maxTokens = Nothing
-    , metadata = Nothing
-    , modalities = Nothing
-    , n = Nothing
-    , parallelToolCalls = Nothing
-    , prediction = Nothing
-    , presencePenalty = Nothing
-    , reasoningEffort = Nothing
-    , responseFormat = Nothing
-    , seed = Nothing
-    , serviceTier = Nothing
-    , stop = Nothing
-    , store = Nothing
-    , temperature = Nothing
-    , toolChoice = Nothing
-    , tools = Nothing
-    , topLogprobs = Nothing
-    , topP = Nothing
-    , user = Nothing
-    , webSearchOptions = Nothing
-    , audio = Nothing
-    }
 
 -- | Default prediction output.
 defaultPredictionOutput :: PredictionOutput
@@ -1172,8 +1130,8 @@ defaultToolChoice = None
 defaultSpecificToolChoice :: SpecificToolChoice
 defaultSpecificToolChoice =
   SpecificToolChoice
-    { toolType = "text"
-    , function = Null
+    { specificToolChoiceToolType = "text"
+    , specificToolChoiceFunction = Null
     }
 
 -- | Default reasoning effort (Low).
@@ -1184,7 +1142,7 @@ defaultReasoningEffort = Low
 defaultFunction :: Function_
 defaultFunction =
   Function_
-    { name = "default_function"
+    { functionName = "default_function"
     , description = Nothing
     , parameters = Nothing
     , strict = Nothing

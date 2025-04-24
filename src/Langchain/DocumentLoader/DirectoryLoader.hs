@@ -134,7 +134,6 @@ instance BaseLoader DirectoryLoader where
           if useMultithreading directoryLoaderOptions && not (null filePaths)
             then mapConcurrently loadFileToDocument filePaths
             else mapM loadFileToDocument filePaths
-        print ("docs are " :: String, docs)
         -- Separate successes and failures
         let (errors, documents) = foldr separateResults ([], []) docs
 

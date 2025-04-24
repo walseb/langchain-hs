@@ -28,6 +28,7 @@ dependencies:
 - conduit >= 1.2 && < 1.4
 - filepath
 - async
+- vector
 
 ghc-options:
 - -Wall

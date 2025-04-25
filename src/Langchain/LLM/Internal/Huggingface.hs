@@ -665,7 +665,6 @@ createChatCompletionStream apiKey r HuggingfaceStreamHandler {..} = do
             then do
               do
                 let content = BS.drop 6 line -- Remove "data: " prefix
-                print ("got conent" :: String, content)
                 case decode (LBS.fromStrict content) of
                   Just chunk -> onToken chunk
                   Nothing -> do

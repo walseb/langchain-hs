@@ -2,8 +2,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
+{- |
+Module:      Langchain.LLM.Internal.Huggingface
+Copyright:   (c) 2025 Tushar Adhatrao
+License:     MIT
+Maintainer:  Tushar Adhatrao <tusharadhatrao@gmail.com>
+Stability:   experimental
+
+Internal types for interfacing with Huggingface.
+https://huggingface.co/docs/inference-providers/providers/cerebras
+-}
 module Langchain.LLM.Internal.Huggingface
-  ( StreamOptions (..)
+  ( -- * Types
+    StreamOptions (..)
   , HuggingfaceChatCompletionRequest (..)
   , Message (..)
   , MessageContent (..)
@@ -26,7 +37,8 @@ module Langchain.LLM.Internal.Huggingface
   , Delta (..)
   , Provider (..)
   , HuggingfaceStreamHandler (..)
-  -- Links
+
+    -- * Functions
   , providerLinks
   , getProviderLink
   , createChatCompletion
@@ -42,6 +54,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.IORef
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (encodeUtf8)
@@ -177,6 +190,7 @@ instance FromJSON StreamOptions where
   parseJSON = withObject "StreamOptions" $ \v ->
     StreamOptions <$> v .: "include_usage"
 
+-- | Huggingface supporting Roles
 data Role = User | Assistant | Tool | System
   deriving (Eq, Show, Generic)
 
@@ -194,6 +208,7 @@ instance FromJSON Role where
     "system" -> pure System
     _ -> fail $ "Unknown role: " ++ T.unpack t
 
+-- | Image url object
 data ImageUrl = ImageUrl
   { url :: String
   }
@@ -206,6 +221,7 @@ instance FromJSON ImageUrl where
   parseJSON = withObject "ImageUrl" $ \v ->
     ImageUrl <$> v .: "url"
 
+-- | ContentObject
 data ContentObject = ContentObject
   { contentType :: Text
   , contentText :: Maybe Text
@@ -227,6 +243,7 @@ instance FromJSON ContentObject where
       <*> v .:? "text"
       <*> v .:? "image_url"
 
+-- \| Message could be either simple text or an object
 data MessageContent = MessageContent [ContentObject] | TextContent Text
   deriving (Eq, Show)
 
@@ -238,6 +255,7 @@ instance FromJSON MessageContent where
   parseJSON v@(String _) = TextContent <$> parseJSON v
   parseJSON v = MessageContent <$> parseJSON v
 
+-- | Huggingface's Message type
 data Message = Message
   { role :: Role
   , content :: MessageContent
@@ -245,6 +263,7 @@ data Message = Message
   }
   deriving (Eq, Show, Generic)
 
+-- | Default message type
 defaultMessage :: Message
 defaultMessage =
   Message
@@ -266,10 +285,18 @@ instance FromJSON Message where
       <*> v .: "content"
       <*> v .:? "name"
 
+{- $providers
+Supported providers and their API endpoints:
+
+- Cerebras: @https://router.huggingface.co/cerebras/...
+- Cohere: @https://router.huggingface.co/cohere/...
+- Fireworks: @https://router.huggingface.co/fireworks-ai/...
+- HFInference: @https://router.huggingface.co/hf-inference/...
+-}
 getProviderLink :: Provider -> Maybe String
 getProviderLink provider = Map.lookup provider providerLinks
 
--- Map of Providers to their respective links
+-- | Map of Providers to their respective links
 providerLinks :: Map.Map Provider String
 providerLinks =
   Map.fromList
@@ -303,8 +330,10 @@ data Provider
   | Together
   deriving (Show, Eq, Ord)
 
+-- | Chat completion request body type. Separatly passes provider.
 data HuggingfaceChatCompletionRequest = HuggingfaceChatCompletionRequest
   { provider :: Provider
+  , timeout :: Maybe Int
   , messages :: [Message]
   , model :: Text
   , stream :: Bool
@@ -325,10 +354,12 @@ data HuggingfaceChatCompletionRequest = HuggingfaceChatCompletionRequest
   }
   deriving (Eq, Show, Generic)
 
+-- | Default values of chat completion request.
 defaultHuggingfaceChatCompletionRequest :: HuggingfaceChatCompletionRequest
 defaultHuggingfaceChatCompletionRequest =
   HuggingfaceChatCompletionRequest
     { provider = Cerebras
+    , timeout = Nothing
     , messages = [defaultMessage]
     , model = "llama-3.3-70b"
     , stream = False
@@ -351,6 +382,7 @@ defaultHuggingfaceChatCompletionRequest =
 instance ToJSON HuggingfaceChatCompletionRequest where
   toJSON
     ( HuggingfaceChatCompletionRequest
+        _
         _
         messages
         model
@@ -393,42 +425,7 @@ instance ToJSON HuggingfaceChatCompletionRequest where
         optionalField _ Nothing = []
         optionalField key (Just value) = [(key, toJSON value)]
 
-{-
-instance FromJSON HuggingfaceChatCompletionRequest where
-  parseJSON = withObject "HuggingfaceChatCompletionRequest" $ \v ->
-    HuggingfaceChatCompletionRequest
-      <$> v .: "messages"
-      <*> v .: "model"
-      <*> v .: "stream"
-      <*> v .:? "max_tokens"
-      <*> v .:? "frequency_penalty"
-      <*> v .:? "logprobs"
-      <*> v .:? "presence_penalty"
-      <*> v .:? "seed"
-      <*> v .:? "stop"
-      <*> v .:? "temperature"
-      <*> v .:? "tool_prompt"
-      <*> v .:? "top_logprobs"
-      <*> v .:? "top_p"
-      <*> v .:? "stream_options"
-      <*> v .:? "response_format"
-      <*> v .:? "tools"
-      <*> v .:? "tool_choice"
--}
--- Response
-{-
-data Message = Message
-  { content :: Text
-  , role :: Role
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON Message where
-  parseJSON = withObject "Message" $ \v ->
-    Message
-      <$> v .: "content"
-      <*> v .: "role"
--}
-
+-- | Choice options
 data Choice = Choice
   { finish_reason :: Text
   , index :: Int
@@ -443,6 +440,7 @@ instance FromJSON Choice where
       <*> v .: "index"
       <*> v .: "message"
 
+-- | Token usage
 data Usage = Usage
   { prompt_tokens :: Int
   , completion_tokens :: Int
@@ -457,6 +455,7 @@ instance FromJSON Usage where
       <*> v .: "completion_tokens"
       <*> v .: "total_tokens"
 
+-- | Timeinfo
 data TimeInfo = TimeInfo
   { queue_time :: Double
   , prompt_time :: Double
@@ -475,6 +474,7 @@ instance FromJSON TimeInfo where
       <*> v .: "total_time"
       <*> v .: "created"
 
+-- | Response type for chat completion
 data ChatCompletionResponse = ChatCompletionResponse
   { responseId :: Text
   , choices :: [Choice]
@@ -499,7 +499,7 @@ instance FromJSON ChatCompletionResponse where
       <*> v .: "usage"
       <*> v .: "time_info"
 
--- Response for stream
+-- | Response for stream
 data Delta = Delta
   { deltaContent :: Maybe Text
   }
@@ -580,8 +580,7 @@ instance FromJSON ChatCompletionChunk where
       <*> v .:? "usage"
       <*> v .:? "time_info"
 
--- Chat completion function
-
+-- | Chat completion function
 createChatCompletion ::
   Text -> HuggingfaceChatCompletionRequest -> IO (Either String ChatCompletionResponse)
 createChatCompletion apiKey r = do
@@ -592,9 +591,9 @@ createChatCompletion apiKey r = do
       manager <-
         newManager
           tlsManagerSettings
-      -- { managerResponseTimeout =
-      -- responseTimeoutMicro (fromMaybe 60 (timeout r) * 1000000)
-      -- }
+            { managerResponseTimeout =
+                responseTimeoutMicro (fromMaybe 60 (timeout r) * 1000000)
+            }
       let req =
             setRequestMethod "POST" $
               setRequestSecure True $
@@ -628,6 +627,7 @@ defaultHuggingfaceStreamHandler =
     , onComplete = pure ()
     }
 
+-- Streaming function for huggingface
 createChatCompletionStream ::
   Text -> HuggingfaceChatCompletionRequest -> HuggingfaceStreamHandler -> IO (Either String ())
 createChatCompletionStream apiKey r HuggingfaceStreamHandler {..} = do
@@ -646,9 +646,9 @@ createChatCompletionStream apiKey r HuggingfaceStreamHandler {..} = do
       manager <-
         newManager
           tlsManagerSettings
-      -- { managerResponseTimeout =
-      --   responseTimeoutMicro (fromMaybe 60 (timeout r) * 1000000)
-      -- }
+            { managerResponseTimeout =
+                responseTimeoutMicro (fromMaybe 60 (timeout r) * 1000000)
+            }
       runResourceT $ do
         response <- http httpReq manager
         bufferRef <- liftIO $ newIORef BS.empty

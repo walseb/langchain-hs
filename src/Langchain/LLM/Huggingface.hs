@@ -9,11 +9,23 @@ License:     MIT
 Maintainer:  Tushar Adhatrao <tusharadhatrao@gmail.com>
 Stability:   experimental
 
-Huggingface inference implementation Langchain's LLM Interface
+Huggingface inference implementation Langchain's LLM Interface.
+https://huggingface.co/docs/inference-providers/providers/cerebras
+
+* Support for text generation, chat, and streaming responses
+* Configuration of Huggingface-specific parameters (temperature, max tokens, etc.)
+* Conversion between Langchain's message format and Huggingface's API requirements
+* Compatibility with Huggingface's hosted inference API and other providers
 -}
 module Langchain.LLM.Huggingface
-  ( Huggingface (..)
+  ( 
+    -- * Types
+    Huggingface (..)
   , Huggingface.Provider (..)
+  , HuggingfaceParams (..)
+  , defaultHuggingfaceParams 
+  , Huggingface.Message (..)
+  , Huggingface.defaultMessage
   ) where
 
 import qualified Data.List.NonEmpty as NE
@@ -23,11 +35,12 @@ import Langchain.Callback
 import Langchain.LLM.Core as LLM
 import qualified Langchain.LLM.Internal.Huggingface as Huggingface
 
+-- | Configuration for Huggingface LLM integration
 data Huggingface = Huggingface
-  { provider :: Huggingface.Provider
-  , apiKey :: Text
-  , modelName :: Text
-  , callbacks :: [Callback]
+  { provider :: Huggingface.Provider -- ^ Service provider (e.g., HostedInferenceAPI)
+  , apiKey :: Text -- ^ Huggingface API authentication key
+  , modelName :: Text -- ^ Model identifier (e.g., "google/flan-t5-xl")
+  , callbacks :: [Callback] -- ^ Event handlers for inference lifecycle
   }
 
 instance Show Huggingface where
@@ -38,16 +51,31 @@ instance Show Huggingface where
       <> unpack modelName
       <> " }"
 
+-- | Generation parameters specific to Huggingface models
 data HuggingfaceParams = HuggingfaceParams
-  { frequencyPenalty :: Maybe Double
-  , maxTokens :: Maybe Integer
-  , presencePenalty :: Maybe Double
-  , stop :: Maybe [String]
-  , toolPrompt :: Maybe String
-  , topP :: Maybe Double
-  , temperature :: Maybe Double
+  { frequencyPenalty :: Maybe Double -- ^ Penalty for token frequency (0.0-2.0)
+  , maxTokens :: Maybe Integer -- ^ Token limit for output
+  , presencePenalty :: Maybe Double -- ^ Penalty for token presence (0.0-2.0)
+  , stop :: Maybe [String] -- ^ Stop sequences to terminate generation
+  , toolPrompt :: Maybe String -- ^ Special prompt for tool interactions
+  , topP :: Maybe Double -- ^ Nucleus sampling probability threshold
+  , temperature :: Maybe Double -- ^ Sampling temperature (0.0-1.0)
+  , timeout :: Maybe Int -- ^ Number of seconds for request timeout
   }
   deriving (Eq, Show)
+
+-- | Default values for huggingface params
+defaultHuggingfaceParams :: HuggingfaceParams
+defaultHuggingfaceParams = HuggingfaceParams {
+  frequencyPenalty = Nothing
+  , maxTokens = Nothing
+  , presencePenalty = Nothing
+  , stop = Nothing
+  , toolPrompt = Nothing
+  , topP = Nothing
+  , temperature = Nothing
+  , timeout = Just 60
+}
 
 instance LLM Huggingface where
   type LLMParams Huggingface = HuggingfaceParams
@@ -69,9 +97,10 @@ instance LLM Huggingface where
           , -- , Huggingface.seed = maybe Nothing seed mbHuggingfaceParams
             Huggingface.stop = maybe Nothing stop mbHuggingfaceParams
           , Huggingface.temperature = maybe Nothing temperature mbHuggingfaceParams
-          , -- , Huggingface.toolPrompt = maybe Nothing toolPrompt mbHuggingfaceParams
+            -- , Huggingface.toolPrompt = maybe Nothing toolPrompt mbHuggingfaceParams
             -- , Huggingface.topLogprobs = maybe Nothing topLogProbs mbHuggingfaceParams
-            Huggingface.topP = maybe Nothing topP mbHuggingfaceParams
+          , Huggingface.topP = maybe Nothing topP mbHuggingfaceParams
+          , Huggingface.timeout = maybe Nothing timeout mbHuggingfaceParams
             -- , Huggingface.streamOptions = maybe Nothing streamOptions mbHuggingfaceParams
             -- , Huggingface.responseFormat = maybe Nothing responseFormat mbHuggingfaceParams
             -- , Huggingface.tools = maybe Nothing tools mbHuggingfaceParams
@@ -108,9 +137,10 @@ instance LLM Huggingface where
           , -- , Huggingface.seed = maybe Nothing seed mbHuggingfaceParams
             Huggingface.stop = maybe Nothing stop mbHuggingfaceParams
           , Huggingface.temperature = maybe Nothing temperature mbHuggingfaceParams
-          , -- , Huggingface.toolPrompt = maybe Nothing toolPrompt mbHuggingfaceParams
+            -- , Huggingface.toolPrompt = maybe Nothing toolPrompt mbHuggingfaceParams
             -- , Huggingface.topLogprobs = maybe Nothing topLogProbs mbHuggingfaceParams
-            Huggingface.topP = maybe Nothing topP mbHuggingfaceParams
+          , Huggingface.topP = maybe Nothing topP mbHuggingfaceParams
+          , Huggingface.timeout = maybe Nothing timeout mbHuggingfaceParams
             -- , Huggingface.streamOptions = maybe Nothing streamOptions mbHuggingfaceParams
             -- , Huggingface.responseFormat = maybe Nothing responseFormat mbHuggingfaceParams
             -- , Huggingface.tools = maybe Nothing tools mbHuggingfaceParams
@@ -146,9 +176,10 @@ instance LLM Huggingface where
         , -- , Huggingface.seed = maybe Nothing seed mbHuggingfaceParams
           Huggingface.stop = maybe Nothing stop mbHuggingfaceParams
         , Huggingface.temperature = maybe Nothing temperature mbHuggingfaceParams
-        , -- , Huggingface.toolPrompt = maybe Nothing toolPrompt mbHuggingfaceParams
+          -- , Huggingface.toolPrompt = maybe Nothing toolPrompt mbHuggingfaceParams
           -- , Huggingface.topLogprobs = maybe Nothing topLogProbs mbHuggingfaceParams
-          Huggingface.topP = maybe Nothing topP mbHuggingfaceParams
+        , Huggingface.topP = maybe Nothing topP mbHuggingfaceParams
+        , Huggingface.timeout = maybe Nothing timeout mbHuggingfaceParams
           -- , Huggingface.streamOptions = maybe Nothing streamOptions mbHuggingfaceParams
           -- , Huggingface.responseFormat = maybe Nothing responseFormat mbHuggingfaceParams
           -- , Huggingface.tools = maybe Nothing tools mbHuggingfaceParams

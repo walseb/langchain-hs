@@ -7,7 +7,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 const config: Config = {
   title: "Langchain hs",
   tagline: 'Build LLM powered applications with Haskell',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/langchain.png',
 
   // Set the production url of your site here
   url: 'https://tusharad.github.io',
@@ -50,12 +50,12 @@ const config: Config = {
 
   themeConfig: {
     // Replace with your project's social card
-    image: 'img/docusaurus-social-card.jpg',
+    image: 'img/langchain.png',
     navbar: {
       title: 'Langchain-hs',
       logo: {
         alt: 'Langchain-hs logo',
-        src: 'img/logo.svg',
+        src: 'img/langchain.png',
       },
       items: [
         {

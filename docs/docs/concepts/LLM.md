@@ -39,7 +39,7 @@ for e.g
 
 data Deepseek = Deepseek {
   apiKey :: Text,
-  apiUrl :: Text
+  apiUrl :: Text,
   model :: Text
 }
 

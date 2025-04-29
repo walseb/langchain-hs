@@ -17,7 +17,7 @@ packages:
     git: https://github.com/tusharad/ollama-haskell
 snapshots:
 - completed:
-    sha256: 16d403d21e50c2d295f40ef52f50e41c34d0c5a36faa164ee8941bf5427d781f
-    size: 676259
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2025/4/7.yaml
-  original: nightly-2025-04-07
+    sha256: 0bff5f3f5548516a7c86cea95d47672383cef34dac97ba28d750a52ddfcdf54a
+    size: 682020
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2025/4/24.yaml
+  original: nightly-2025-04-24

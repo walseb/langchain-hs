@@ -1,4 +1,4 @@
-resolver: nightly-2025-04-24
+resolver: lts-20.26
 packages:
 - .
 extra-deps:

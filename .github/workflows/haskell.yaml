@@ -44,9 +44,19 @@ jobs:
       uses: freckle/stack-action@v5
       with:
           stack-arguments: --stack-yaml ${{ matrix.stack-yaml }}
+  
+  docs:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
 
-    # Docs
-    - uses: actions/setup-node@v4
+    steps:
+    - name: Copy repo into actions 
+      uses: actions/checkout@v4
+    
+    - name: Setup node
+      uses: actions/setup-node@v4
       with:
         node-version: 20
         cache: 'npm'

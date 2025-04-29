@@ -204,7 +204,7 @@ instance (LLM llm) => Agent (ReactAgent llm) where
             -- Call the LLM
             let m =
                   ( msgs
-                      `NE.append` NE.fromList
+                      <> NE.fromList
                         [ (Message System renderedPrompt defaultMessageData)
                         , (Message User userQuery defaultMessageData)
                         ]

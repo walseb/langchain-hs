@@ -29,7 +29,7 @@ module Langchain.OutputParser.Core
   ) where
 
 import Data.Aeson
-import Data.ByteString.Char8 (fromStrict)
+import Data.ByteString.Lazy.Char8 (fromStrict)
 import Data.Char (isDigit, isSpace)
 import Data.Text (Text)
 import qualified Data.Text as T

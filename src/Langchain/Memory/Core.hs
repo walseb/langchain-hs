@@ -123,7 +123,7 @@ instance BaseMemory WindowBufferMemory where
               Right $
                 winBuffMem
                   { windowBufferMessages =
-                      windowBufferMessages `NE.append` NE.singleton msg
+                      windowBufferMessages <> NE.singleton msg
                   }
 
   -- \| Add user message
@@ -179,7 +179,7 @@ Example:
 [msg1, msg2]
 -}
 addAndTrim :: Int -> Message -> ChatMessage -> ChatMessage
-addAndTrim n msg msgs = trimChatMessage n (msgs `NE.append` NE.singleton msg)
+addAndTrim n msg msgs = trimChatMessage n (msgs <> NE.singleton msg)
 
 {- | Create initial chat history
 Example:

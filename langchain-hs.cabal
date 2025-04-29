@@ -36,6 +36,7 @@ library
       Langchain.DocumentLoader.PdfLoader
       Langchain.Embeddings.Core
       Langchain.Embeddings.Ollama
+      Langchain.Embeddings.OpenAI
       Langchain.LLM.Core
       Langchain.LLM.Huggingface
       Langchain.LLM.Internal.Huggingface

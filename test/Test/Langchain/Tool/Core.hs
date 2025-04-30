@@ -41,9 +41,12 @@ tests =
 
 testWebScraperTool :: Assertion
 testWebScraperTool = do
-  r <- runTool WebScraper "https://hackage.haskell.org/package/scalpel-0.6.2.2"
-  assertBool "Scraper should contain stuff like title" $
-    T.isInfixOf "scalpel: A high level web scraping library for Haskell" r
+  eRes <- runTool WebScraper "https://hackage.haskell.org/package/scalpel-0.6.2.2"
+  assertBool "Scraper should contain stuff like title" $ do
+    case eRes of 
+      Left _ -> False
+      Right r -> do
+        T.isInfixOf "Scalpel is a web scraping library inspired by libraries like" r
 
 testMockTool :: Assertion
 testMockTool = do

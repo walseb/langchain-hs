@@ -9,20 +9,26 @@ Copyright   : (c) 2025 Tushar Adhatrao
 License     : MIT
 Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
 Stability   : experimental
+
+WebScraper is a tool that scrapes text content from a given URL.
+It fetches the HTML content of the page, extracts the body text, removes scripts, and strips class/id/style attributes from the HTML tags.
+It is designed to be used with the Langchain framework for building language models and applications.
 -}
 module Langchain.Tool.WebScraper (WebScraper (..), WebPageInfo (..), fetchAndScrape) where
 
 import Control.Exception (SomeException, try)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString.Lazy as LBS
-import Data.Maybe (listToMaybe)
+import qualified Data.List as L
+import Data.Maybe (catMaybes, listToMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import GHC.Generics (Generic)
 import Langchain.Tool.Core
 import Network.HTTP.Simple
-import Text.HTML.Scalpel
+import qualified Text.HTML.TagSoup as TS
+import qualified Text.StringLike as TS
 
 -- | Represents a web scraper tool that extracts content from web pages
 data WebScraper = WebScraper
@@ -31,9 +37,7 @@ data WebScraper = WebScraper
 -- | Stores the extracted webpage information
 data WebPageInfo = WebPageInfo
   { pageTitle :: Maybe Text
-  , pageHeadings :: [Text]
-  , pageLinks :: [(Text, Text)] -- (Link text, URL)
-  , pageText :: Text
+  , pageContent :: Text
   }
   deriving (Show, Generic)
 
@@ -46,19 +50,19 @@ type ScraperInput = Text
 -- | Implement the Tool typeclass for WebScraper
 instance Tool WebScraper where
   type Input WebScraper = ScraperInput
-  type Output WebScraper = Text
+  type Output WebScraper = (Either String Text)
 
   toolName _ = "web_scraper"
 
   toolDescription _ =
-    "Scrapes content from a webpage. Provide a valid URL, and it will extract the title,"
-      <> "headings, links, and text content."
+    "Scrapes content from a webpage. Provide a valid URL, and it will extract only the textual body content "
+      <> "with scripts removed and without class/id/style attributes."
 
   runTool _ url = do
     result <- fetchAndScrape url
     case result of
-      Left err -> pure $ "Error scraping webpage: " <> T.pack (show err)
-      Right info -> pure $ T.pack (show info)
+      Left err -> pure $ Left $ "Error scraping webpage: " <> err
+      Right info -> pure $ Right $ pageContent info
 
 -- | Fetch HTML content from a URL and extract webpage information
 fetchAndScrape :: Text -> IO (Either String WebPageInfo)
@@ -70,47 +74,95 @@ fetchAndScrape url = do
     Right r -> do
       let rBody = (getResponseBody r)
       let htmlContent = TE.decodeUtf8 $ LBS.toStrict rBody
-      let scraped = scrapeStringLike htmlContent scrapeWebPageInfo
-      case scraped of
-        Nothing -> pure $ Left "Failed to parse HTML content"
-        Just info -> pure $ Right info
 
--- | Define the Scalpel scraper for extracting webpage information
-scrapeWebPageInfo :: Scraper Text WebPageInfo
-scrapeWebPageInfo = do
-  title <- scrapeTitle
-  headings <- scrapeHeadings
-  links <- scrapeLinks
-  t <- scrapeText
-  return $ WebPageInfo title headings links t
+      -- Clean and extract the content
+      let tags = TS.parseTags htmlContent
+      let title = extractTitle tags
+      let cleanedContent = cleanBodyContent tags
 
--- | Scrape the page title
-scrapeTitle :: Scraper Text (Maybe Text)
-scrapeTitle = fmap listToMaybe $ texts "title"
+      pure $ Right $ WebPageInfo title cleanedContent
 
--- | Scrape all headings (h1-h6)
-scrapeHeadings :: Scraper Text [Text]
-scrapeHeadings = do
-  h1s <- texts "h1"
-  h2s <- texts "h2"
-  h3s <- texts "h3"
-  h4s <- texts "h4"
-  h5s <- texts "h5"
-  h6s <- texts "h6"
-  return $ concat [h1s, h2s, h3s, h4s, h5s, h6s]
+-- | Extract the title from parsed HTML tags
+extractTitle :: [TS.Tag Text] -> Maybe Text
+extractTitle tags =
+  let titleTags = TS.partitions (TS.isTagOpenName "title") tags
+   in if null titleTags
+        then Nothing
+        else case listToMaybe titleTags of
+          Nothing -> Nothing
+          Just r -> Just $ T.strip $ TS.innerText r
 
--- | Scrape all links with their URLs
-scrapeLinks :: Scraper Text [(Text, Text)]
-scrapeLinks = chroots "a" $ do
-  linkText <- text "a"
-  linkHref <- attr "href" "a"
-  return (linkText, linkHref)
+-- | Clean the HTML content: extract body, remove scripts, and strip attributes
+cleanBodyContent :: [TS.Tag Text] -> Text
+cleanBodyContent tags =
+  let -- Extract only body content
+      bodyTags = case TS.partitions (TS.isTagOpenName "body") tags of
+        [] -> tags -- If no body tag is found, use all tags
+        (bodySection : _) -> bodySection
+      filteredTags = removeTags bodyTags
+      content = extractText filteredTags
+   in content
 
--- | Scrape main text content (from p, div, span elements)
-scrapeText :: Scraper Text Text
-scrapeText = do
-  paragraphs <- texts "p"
-  divs <- texts "div"
-  spans <- texts "span"
-  listElems <- texts "li"
-  return $ T.intercalate "\n\n" $ filter (not . T.null) $ concat [paragraphs, divs, spans, listElems]
+{-
+If the tag is <a> anchor tag, then extract and append the link as well.
+-}
+extractText :: [TS.Tag Text] -> Text
+extractText ts = TS.strConcat $ catMaybes (go ts)
+  where
+    go [] = []
+    go ((TS.TagOpen "a" aAttrList) : xs) =
+      ( Just "link: "
+          <> L.lookup "href" aAttrList
+          <> Just " for:"
+      )
+        : go xs
+    go (x : xs) = TS.maybeTagText x : go xs
+
+allowedTags :: [TS.Tag Text -> Bool]
+allowedTags =
+  textTag
+    : ( mkIsTag
+          <$> [ "p"
+              , "button"
+              , "a"
+              , "div"
+              , "h1"
+              , "h2"
+              , "h3"
+              , "h4"
+              , "h5"
+              , "h6"
+              , "span"
+              , "ul"
+              , "li"
+              , "input"
+              , "submit"
+              , "label"
+              , "option"
+              , "select"
+              , "textarea"
+              , "blockquote"
+              , "pre"
+              , "code"
+              , "strong"
+              , "em"
+              , "b"
+              , "i"
+              , "u"
+              , "mark"
+              , "small"
+              , "big"
+              ]
+      )
+  where
+    textTag (TS.TagText _) = True
+    textTag _ = False
+    mkIsTag name tag = isTag tag name
+
+isTag :: TS.Tag Text -> Text -> Bool
+isTag (TS.TagOpen name _) t = name == t
+isTag (TS.TagClose name) t = name == t
+isTag _ _ = False
+
+removeTags :: [TS.Tag Text] -> [TS.Tag Text]
+removeTags = filter (\t -> any (\f -> f t) allowedTags)

@@ -51,6 +51,7 @@ library
       Langchain.LLM.Ollama
       Langchain.LLM.OpenAI
       Langchain.Memory.Core
+      Langchain.Memory.TokenBufferMemory
       Langchain.OutputParser.Core
       Langchain.PromptTemplate
       Langchain.Retriever.Core

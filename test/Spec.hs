@@ -16,6 +16,7 @@ import qualified Test.Langchain.Runnable.Utils as RunnableUtilsTest
 import qualified Test.Langchain.TextSplitter.Character as TextSplitterTest
 import qualified Test.Langchain.Tool.Core as ToolTest
 import qualified Test.Langchain.VectorStore.Core as VectorStoreTest
+import qualified Test.Langchain.Memory.TokenBufferMemory as TokenBufferMemoryTest
 import Test.Tasty
 
 main :: IO ()
@@ -41,4 +42,5 @@ main =
       , RunnableUtilsTest.tests
       , RunnableChainsTest.tests
       , ConverationChainsTest.tests
+      , TokenBufferMemoryTest.tests
       ]

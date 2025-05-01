@@ -101,6 +101,7 @@ test-suite langchain-hs-test
       Test.Langchain.LLM.Core
       Test.Langchain.LLM.Ollama
       Test.Langchain.Memory.Core
+      Test.Langchain.Memory.TokenBufferMemory
       Test.Langchain.OutputParser.Core
       Test.Langchain.PromptTemplate
       Test.Langchain.Retriever.Core

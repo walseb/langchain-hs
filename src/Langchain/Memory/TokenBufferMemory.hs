@@ -14,7 +14,7 @@ Stability   : experimental
 Implementation of LangChain's Conversation token buffer.
 https://python.langchain.com/v0.1/docs/modules/memory/types/token_buffer/
 -}
-module Langchain.Memory.TokenBufferMemory (TokenBufferMemory (..)) where
+module Langchain.Memory.TokenBufferMemory (TokenBufferMemory (..), countTokens) where
 
 import Data.List (uncons)
 import qualified Data.List.NonEmpty as NE
@@ -30,6 +30,8 @@ data TokenBufferMemory = TokenBufferMemory
   }
   deriving (Eq, Show)
 
+-- | Function for counting tokens for the given list of messages
+-- | 1 token = 4 characters
 countTokens :: [Message] -> Int
 countTokens = sum . map go
   where

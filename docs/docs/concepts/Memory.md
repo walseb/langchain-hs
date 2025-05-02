@@ -24,6 +24,12 @@ It is basic but helpful mechanism to keep the token size.
 
 `TokenBufferMemory` type provides a mechanism to store chat history with a `max token size`. Once it the conversation crosses that limit, the Type will omit the older conversation and keep the token size intact. 1 token is equal to 4 characters as per (link)[https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them].
 
+:::warning
+
+WindowBufferMemory and TokenBufferMemory trims non System messages only.
+
+:::
+
 ### Example
 
 ```haskell

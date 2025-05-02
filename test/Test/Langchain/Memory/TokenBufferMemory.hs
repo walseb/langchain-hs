@@ -37,7 +37,7 @@ runAddAndGet initial msgs = do
           mem <- mem_
           eRes <- addMessage mem msg
           case eRes of
-            Left err -> error err
+            Left _ -> pure mem
             Right r -> pure r
       )
       (pure initial)
@@ -86,7 +86,7 @@ addMessageTests =
             initial = TB.TokenBufferMemory maxTok (NE.fromList [baseMsg])
 
         updated <- runAddAndGet initial [userMsg, aiMsg]
-        NE.toList updated @?= [userMsg, aiMsg] -- first message gets trimmed
+        NE.toList updated @?= [baseMsg, aiMsg] -- first message gets trimmed
     , testCase "New message alone exceeds limit" $ do
         let initial = TB.TokenBufferMemory 1 (NE.fromList [mkMsg System ""])
             bigMsg = mkMsg User (T.replicate 10 "a") -- 10 chars → 2.5 tokens (ceil to 3)

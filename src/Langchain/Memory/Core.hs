@@ -73,6 +73,8 @@ class BaseMemory m where
 {- | Sliding window memory implementation.
 Stores chat history with maximum size limit.
 
+Note: This implementation will not trim system messages.
+
 Example:
 
 >>> let mem = WindowBufferMemory 2 (NE.singleton (Message System "Sys" defaultMessageData))
@@ -82,8 +84,9 @@ Right (WindowBufferMemory {maxWindowSize = 2, ...})
 data WindowBufferMemory = WindowBufferMemory
   { maxWindowSize :: Int
   -- ^ Maximum number of messages to retain
+  -- ^ It is user's responsiblity to make sure the number is > 0.
   , windowBufferMessages :: ChatMessage
-  -- ^ Current message buffer [[9]]
+  -- ^ Current message buffer 
   }
   deriving (Show, Eq)
 
@@ -108,23 +111,25 @@ instance BaseMemory WindowBufferMemory where
   --  >>> addMessage mem msg3
   --  Right (WindowBufferMemory {windowBufferMessages = [msg2, msg3]})
   --
-  addMessage winBuffMem@WindowBufferMemory {..} msg =
-    let currentLength = NE.length windowBufferMessages
-     in if currentLength >= maxWindowSize
-          then
-            pure $
-              Right $
-                winBuffMem
-                  { windowBufferMessages =
-                      NE.fromList $ (NE.tail windowBufferMessages) ++ [msg]
-                  }
-          else
-            pure $
-              Right $
-                winBuffMem
-                  { windowBufferMessages =
-                      windowBufferMessages <> NE.singleton msg
-                  }
+  addMessage winBuffMem@WindowBufferMemory{..} newMsg = do
+    let currentMsgs = NE.toList windowBufferMessages
+        newMsgs = currentMsgs ++ [newMsg]
+
+    if length newMsgs > maxWindowSize
+        then do
+            let trimmedMsgs = removeOldestNonSystem newMsgs
+            pure $ Right $ winBuffMem { windowBufferMessages = NE.fromList trimmedMsgs }
+        else
+            pure $ Right $ winBuffMem { windowBufferMessages = NE.fromList newMsgs }
+    where
+      isSystem (Message role _ _) = role == System
+      
+      removeOldestNonSystem = go
+        where
+          go [] = []
+          go (m:ms)
+            | isSystem m = m : go ms
+            | otherwise = ms
 
   -- \| Add user message
   --

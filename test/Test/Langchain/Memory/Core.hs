@@ -89,7 +89,7 @@ windowBufferMemoryTests =
               Left err -> assertFailure $ "Expected Right but got Left: " ++ err
               Right msgs -> do
                 NE.length msgs @?= 3
-                NE.toList msgs @?= [userMsg "User1", aiMsg "AI1", userMsg "User2"]
+                NE.toList msgs @?= [systemMsg "System", aiMsg "AI1", userMsg "User2"]
     , testCase "addUserMessage should add message with User role" $ do
         let initialMsgs = NE.fromList [systemMsg "System"]
             memory = WindowBufferMemory 3 initialMsgs

@@ -19,16 +19,15 @@ module Langchain.Tool.WebScraper (WebScraper (..), WebPageInfo (..), fetchAndScr
 import Control.Exception (SomeException, try)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.List as L
-import Data.Maybe (catMaybes, listToMaybe)
+import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import GHC.Generics (Generic)
 import Langchain.Tool.Core
+import Langchain.Tool.Utils
 import Network.HTTP.Simple
 import qualified Text.HTML.TagSoup as TS
-import qualified Text.StringLike as TS
 
 -- | Represents a web scraper tool that extracts content from web pages
 data WebScraper = WebScraper
@@ -91,78 +90,3 @@ extractTitle tags =
         else case listToMaybe titleTags of
           Nothing -> Nothing
           Just r -> Just $ T.strip $ TS.innerText r
-
--- | Clean the HTML content: extract body, remove scripts, and strip attributes
-cleanBodyContent :: [TS.Tag Text] -> Text
-cleanBodyContent tags =
-  let -- Extract only body content
-      bodyTags = case TS.partitions (TS.isTagOpenName "body") tags of
-        [] -> tags -- If no body tag is found, use all tags
-        (bodySection : _) -> bodySection
-      filteredTags = removeTags bodyTags
-      content = extractText filteredTags
-   in content
-
-{-
-If the tag is <a> anchor tag, then extract and append the link as well.
--}
-extractText :: [TS.Tag Text] -> Text
-extractText ts = TS.strConcat $ catMaybes (go ts)
-  where
-    go [] = []
-    go ((TS.TagOpen "a" aAttrList) : xs) =
-      ( Just "link: "
-          <> L.lookup "href" aAttrList
-          <> Just " for:"
-      )
-        : go xs
-    go (x : xs) = TS.maybeTagText x : go xs
-
-allowedTags :: [TS.Tag Text -> Bool]
-allowedTags =
-  textTag
-    : ( mkIsTag
-          <$> [ "p"
-              , "button"
-              , "a"
-              , "div"
-              , "h1"
-              , "h2"
-              , "h3"
-              , "h4"
-              , "h5"
-              , "h6"
-              , "span"
-              , "ul"
-              , "li"
-              , "input"
-              , "submit"
-              , "label"
-              , "option"
-              , "select"
-              , "textarea"
-              , "blockquote"
-              , "pre"
-              , "code"
-              , "strong"
-              , "em"
-              , "b"
-              , "i"
-              , "u"
-              , "mark"
-              , "small"
-              , "big"
-              ]
-      )
-  where
-    textTag (TS.TagText _) = True
-    textTag _ = False
-    mkIsTag name tag = isTag tag name
-
-isTag :: TS.Tag Text -> Text -> Bool
-isTag (TS.TagOpen name _) t = name == t
-isTag (TS.TagClose name) t = name == t
-isTag _ _ = False
-
-removeTags :: [TS.Tag Text] -> [TS.Tag Text]
-removeTags = filter (\t -> any (\f -> f t) allowedTags)

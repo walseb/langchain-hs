@@ -42,6 +42,7 @@ import GHC.Generics
 import Langchain.Runnable.Core (Runnable (..))
 import Langchain.Tool.Core
 import Network.HTTP.Simple
+import Langchain.Tool.Utils (cleanHtmlContent)
 
 {- |
 Wikipedia search tool configuration
@@ -67,7 +68,7 @@ data WikipediaTool = WikipediaTool
 
 -- | Default value for top K
 defaultTopK :: Int
-defaultTopK = 2
+defaultTopK = 1
 
 -- | Default value for max chars
 defaultDocMaxChars :: Int
@@ -152,7 +153,7 @@ searchWiki tool q = do
     else do
       let pageIds = map pageid (take (topK tool) (search query))
       pages <- mapM (getPage tool) pageIds
-      let extracts = map (T.take (docMaxChars tool) . extract) pages
+      let extracts = map (T.take (docMaxChars tool) . cleanHtmlContent . extract) pages
       return $ T.intercalate "\n\n" extracts
 
 -- | Perform a search on Wikipedia.

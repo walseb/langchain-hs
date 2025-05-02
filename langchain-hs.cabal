@@ -62,6 +62,7 @@ library
       Langchain.Runnable.Utils
       Langchain.TextSplitter.Character
       Langchain.Tool.Core
+      Langchain.Tool.Utils
       Langchain.Tool.WebScraper
       Langchain.Tool.WikipediaTool
       Langchain.VectorStore.Core

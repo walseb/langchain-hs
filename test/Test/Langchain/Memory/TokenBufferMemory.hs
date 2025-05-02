@@ -1,8 +1,8 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Langchain.Memory.TokenBufferMemory (tests) where
 
-import Data.List (unsnoc)
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -11,6 +11,12 @@ import Langchain.Memory.Core (BaseMemory (..))
 import qualified Langchain.Memory.TokenBufferMemory as TB
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
+#if MIN_VERSION_base(4,19,0)
+import Data.List (unsnoc)
+#else
+unsnoc :: [a] -> Maybe ([a], a)
+unsnoc = foldr (\x -> Just . maybe ([], x) (\(~(a, b)) -> (x : a, b))) Nothing
+#endif
 
 mkMsg :: Role -> Text -> Message
 mkMsg role1 content1 = Message role1 content1 defaultMessageData
@@ -25,22 +31,17 @@ assertLeft _ (Right _) = error $ "Expected Left but got Right"
 
 runAddAndGet :: TB.TokenBufferMemory -> [Message] -> IO ChatMessage
 runAddAndGet initial msgs = do
-  TB.tokenBufferMessages <$> foldl
-    ( \mem_ msg -> do
-        mem <- mem_
-        eRes <- addMessage mem msg
-        case eRes of
-          Left err -> error err
-          Right r -> pure r
-    )
-    (pure initial)
-    msgs
-
--- _ (pure (tokenBufferMessages initial) msgs
-{-
-let result = foldl (\mem msg -> addMessage mem msg >>= either error id) (pure initial) msgs
-result >>= return . TB.tokenBufferMessages
--}
+  TB.tokenBufferMessages
+    <$> foldl
+      ( \mem_ msg -> do
+          mem <- mem_
+          eRes <- addMessage mem msg
+          case eRes of
+            Left err -> error err
+            Right r -> pure r
+      )
+      (pure initial)
+      msgs
 
 -- Tests
 tests :: TestTree
@@ -85,7 +86,7 @@ addMessageTests =
             initial = TB.TokenBufferMemory maxTok (NE.fromList [baseMsg])
 
         updated <- runAddAndGet initial [userMsg, aiMsg]
-        NE.toList updated @?= [userMsg , aiMsg] -- first message gets trimmed
+        NE.toList updated @?= [userMsg, aiMsg] -- first message gets trimmed
     , testCase "New message alone exceeds limit" $ do
         let initial = TB.TokenBufferMemory 1 (NE.fromList [mkMsg System ""])
             bigMsg = mkMsg User (T.replicate 10 "a") -- 10 chars → 2.5 tokens (ceil to 3)

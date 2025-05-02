@@ -1,6 +1,11 @@
 .stack-work/
 *~
 Wiki.md
+stack-lts-19.33.yaml.lock
+stack-lts-20.26.yaml.lock
+stack-lts-21.25.yaml.lock
+stack-lts-22.43.yaml.lock
+stack-lts-23.19.yaml.lock
 
 # Dependencies
 node_modules

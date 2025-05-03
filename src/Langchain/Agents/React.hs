@@ -10,6 +10,8 @@ Copyright   : (c) 2025 Tushar Adhatrao
 License     : MIT
 Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
 
+Note: This module is not functional at this moment.
+
 Implements the ReAct pattern where the agent alternates between:
 
 1. Reasoning (generating thoughts)

@@ -8,6 +8,8 @@ Copyright   : (c) 2025 Tushar Adhatrao
 License     : MIT
 Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
 
+Note: This module is not functional at this moment.
+
 This module provides the 'ConversationChain' implementation, which manages stateful
 conversations with language models. It combines:
 

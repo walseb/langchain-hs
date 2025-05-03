@@ -16,7 +16,7 @@ Example usage:
 @
 -- Create Ollama embeddings configuration
 ollamaEmb = OllamaEmbeddings
-  { model = "llama3"
+  { model = "nomic-embed-text:latest"
   , defaultTruncate = Just True
   , defaultKeepAlive = Just "5m"
   }

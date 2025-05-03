@@ -35,7 +35,6 @@ source-repository head
 library
   exposed-modules:
       Langchain.Agents.Core
-      Langchain.Agents.React
       Langchain.Callback
       Langchain.Chain.RetrievalQA
       Langchain.DocumentLoader.Core
@@ -96,7 +95,6 @@ test-suite langchain-hs-test
   main-is: Spec.hs
   other-modules:
       Test.Langchain.Agent.Core
-      Test.Langchain.Agent.ReactAgent
       Test.Langchain.DocumentLoader.Core
       Test.Langchain.DocumentLoader.DirectoryLoader
       Test.Langchain.Embeddings.Core

@@ -4,8 +4,42 @@ sidebar_position: 12
 
 # Agents 
 
-`Agents` module provides a mechanism to create and manage agents. An agent is a type of chain that can take an action based on the output of a previous action. Agents are useful for building complex workflows that require multiple steps and decision-making.
-Agents can be used to create chatbots, recommendation systems, and other applications that require a sequence of actions to be performed based on user input or other data.
-Agents are designed to be flexible and extensible, allowing developers to implement their own agents with custom input and output types. The `Agent` typeclass is used in conjunction with the `Chain` typeclass to provide a complete solution for building and executing chains of agents. By implementing the `Agent` typeclass, developers can create custom agents that meet their specific needs and requirements.
+The core idea of agents is to use a language model to choose a sequence of actions to take. In chains, a sequence of actions is hardcoded (in code). In agents, a language model is used as a reasoning engine to determine which actions to take and in which order.
 
-As of 0.0.1.0, the agents are in the early stages of development and are not yet fully functional. The API may change in future releases, and additional features may be added as the library evolves. The current implementation is intended for experimentation and exploration of the agent concept, and is not yet suitable for production use.
+## Example 
+
+Here I have used ReAct agent type find latest information that is not know to LLM using WikipediaTool.
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+module ReactAgent (runApp) where
+
+import Langchain.Agents.Core
+import Langchain.Agents.React
+import Langchain.LLM.Ollama
+import Langchain.Tool.WikipediaTool
+
+runApp :: IO ()
+runApp = do
+    let ollamaLLM =
+            Ollama
+                { modelName = "qwen3:4b"
+                , callbacks = []
+                }
+    let anyWikiTool =
+            customAnyTool defaultWikipediaTool id id
+    eRes <-
+        runReactAgent
+            ollamaLLM
+            Nothing
+            [anyWikiTool]
+            "When is james gunn's superman movie releasing /no_think"
+    print eRes
+```
+
+#### Output 
+
+```
+Right (AgentFinish {returnValues = fromList [("output","James Gunn's Superman movie is scheduled to be released theatrically in the United States on July 11, 2025.")], finishLog = "<think>\n\n</think>\n\nThought: I now know the final answer  \nFinal Answer: James Gunn's Superman movie is scheduled to be released theatrically in the United States on July 11, 2025."})
+```

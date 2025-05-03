@@ -26,13 +26,15 @@ defaultReactPromptTemplate =
       , "You have access to the following tools:"
       , "{tools}"
       , ""
-      , "Use the following format:"
-      , ""
+      , "If you don't know the answer, you can use tool to get the information."
+      , "Response in either one or the other format:"
+      , "1. If you don't the answer and want to make a tool call:"
       , "Thought: you should always think about what to do"
       , "Action: the action to take, should be one of [{tool_names}]"
       , "Action Input: the input to the action"
-      , "Observation: the result of the action"
-      , "... (this Thought/Action/Action Input/Observation can repeat N times)"
+      , "... (this Thought/Action/Action Input can repeat N times)"
+      , ""
+      , "2. If you found out the answer:"
       , "Thought: I now know the final answer"
       , "Final Answer: the final answer to the original input question"
       ]
@@ -82,7 +84,7 @@ extractAfter marker text =
   let afterMarker = snd $ T.breakOn marker text
    in if T.null afterMarker
         then ""
-        else T.strip $ T.dropWhile (/= ':') afterMarker
+        else T.strip $ T.drop 2 $ T.dropWhile (/= ':') afterMarker
 
 -- | ReactAgent Type
 data (LLM llm) => ReactAgent llm = ReactAgent

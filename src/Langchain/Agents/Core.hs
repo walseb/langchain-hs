@@ -130,7 +130,7 @@ Execute a single tool call
 Handles tool lookup and input/output conversion.
 -}
 executeTool :: [AnyTool] -> Text -> Text -> IO (Either String Text)
-executeTool tools toolName_ input =
+executeTool tools toolName_ input = do
   case find (\(AnyTool t _ _) -> toolName t == toolName_) tools of
     Nothing -> return $ Left $ "Tool not found: " <> T.unpack toolName_
     Just (AnyTool {..}) -> do

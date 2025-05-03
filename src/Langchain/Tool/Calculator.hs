@@ -3,6 +3,7 @@
 
 module Langchain.Tool.Calculator
   ( CalculatorTool(..)
+  , Expr (..)
   , parseExpression
   , evaluateExpression
   ) where
@@ -15,13 +16,13 @@ import Control.Monad (void)
 
 -- | Expression data type for our calculator
 data Expr
-  = Num Double
+  = Number_ Double
   | Add Expr Expr
   | Sub Expr Expr
   | Mul Expr Expr
   | Div Expr Expr
   | Pow Expr Expr
-  deriving (Show)
+  deriving (Show, Eq)
 
 -- | Calculator Tool implementation
 data CalculatorTool = CalculatorTool
@@ -91,7 +92,7 @@ parseExpression = parse expr "" . T.unpack
           <|> return left
 
     factor = 
-      (Num . read <$> numberStr)
+      (Number_ . read <$> numberStr)
       <|> 
       (spaces *> char '(' *> spaces *> expr <* spaces <* char ')' <* spaces)
       
@@ -104,7 +105,7 @@ parseExpression = parse expr "" . T.unpack
 -- | Evaluate a parsed expression to a Double
 evaluateExpression :: Expr -> Double
 evaluateExpression expr = case expr of
-  Num n -> n
+  Number_ n -> n
   Add a b -> evaluateExpression a + evaluateExpression b
   Sub a b -> evaluateExpression a - evaluateExpression b
   Mul a b -> evaluateExpression a * evaluateExpression b

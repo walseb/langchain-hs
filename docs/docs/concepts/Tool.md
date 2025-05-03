@@ -14,6 +14,7 @@ At this moment, following integrations available,
 
 - WikipediaTool
 - WebScraperTool
+- CalculatorTool
 
 ## Example 
 
@@ -149,3 +150,21 @@ Model operation started
 Model completed with
 Right "<think>\n\n</think>\n\nThe lead actor in James Gunn's *Superman* is **David Corenswet**, who plays Clark Kent / Superman."
 ```
+
+### Calculator 
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+module LangchainLib (runApp) where
+
+import Langchain.Tool.Core
+import Langchain.Tool.Calculator
+
+runApp :: IO ()
+runApp = do
+   res <- runTool CalculatorTool "2.0+(1 - 2) * 5"
+   print res
+```
+
+Calculator tool can perform Add, Sub, Mul, Div, Pow operation and return type would be Either String Double.

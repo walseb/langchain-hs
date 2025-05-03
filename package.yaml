@@ -37,6 +37,7 @@ dependencies:
 - async
 - vector
 - tagsoup
+- parsec
 
 ghc-options:
 - -Wall

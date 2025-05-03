@@ -14,7 +14,7 @@ Core module defining the Tool typeclass for Langchain-Haskell integration.
 
 This module provides a typeclass interface for creating interoperable tools
 that can be used with Large Language Models (LLMs) in Haskell applications.
-The design mirrors LangChain's Python tooling system [[9]] while maintaining
+The design mirrors LangChain's Python tooling system while maintaining
 Haskell's type safety and functional programming principles.
 
 Example use case:

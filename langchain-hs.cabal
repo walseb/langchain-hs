@@ -61,6 +61,7 @@ library
       Langchain.Runnable.Core
       Langchain.Runnable.Utils
       Langchain.TextSplitter.Character
+      Langchain.Tool.Calculator
       Langchain.Tool.Core
       Langchain.Tool.Utils
       Langchain.Tool.WebScraper
@@ -84,6 +85,7 @@ library
     , http-conduit ==2.*
     , http-types >=0.11 && <0.13
     , ollama-haskell
+    , parsec
     , pdf-toolbox-document ==0.1.4
     , tagsoup
     , text >=1.2 && <3
@@ -129,6 +131,7 @@ test-suite langchain-hs-test
     , http-types >=0.11 && <0.13
     , langchain-hs
     , ollama-haskell
+    , parsec
     , pdf-toolbox-document ==0.1.4
     , tagsoup
     , tasty

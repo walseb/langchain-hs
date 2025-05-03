@@ -37,6 +37,7 @@ library
       Langchain.Agents.Core
       Langchain.Agents.React
       Langchain.Callback
+      Langchain.Chain.RetrievalQA
       Langchain.DocumentLoader.Core
       Langchain.DocumentLoader.DirectoryLoader
       Langchain.DocumentLoader.FileLoader

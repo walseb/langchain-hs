@@ -35,6 +35,7 @@ source-repository head
 library
   exposed-modules:
       Langchain.Agents.Core
+      Langchain.Agents.React
       Langchain.Callback
       Langchain.Chain.RetrievalQA
       Langchain.DocumentLoader.Core

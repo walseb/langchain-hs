@@ -1,8 +1,5 @@
-{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeFamilies #-}
 
 {- |
 Module      : Langchain.Agents.Core
@@ -14,16 +11,6 @@ Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
 Agents use LLMs as reasoning engines to determine actions dynamically
 This module implements the core agent execution loop and interfaces,
 supporting tool interaction and memory management.
-
-Example agent execution flow:
-
-> executor <- AgentExecutor
->   { executor = myAgent
->   , executorMemory = emptyMemory
->   , maxIterations = 5
->   , returnIntermediateSteps = True
->   }
-> result <- runAgentExecutor executor "Explain quantum computing"
 -}
 module Langchain.Agents.Core
   ( AgentAction (..)
@@ -32,10 +19,8 @@ module Langchain.Agents.Core
   , Agent (..)
   , AnyTool (..)
   , AgentState (..)
-  , AgentExecutor (..)
   , runAgent
   , runAgentLoop
-  , runAgentExecutor
   , executeTool
   , runSingleStep
   , customAnyTool
@@ -49,7 +34,6 @@ import qualified Data.Text as T
 import Langchain.LLM.Core (Message (Message), Role (..), defaultMessageData)
 import Langchain.Memory.Core (BaseMemory (..))
 import Langchain.PromptTemplate (PromptTemplate)
-import qualified Langchain.Runnable.Core as Run
 import Langchain.Tool.Core (Tool (..))
 
 {- |
@@ -87,72 +71,17 @@ data (BaseMemory m) => AgentState m = AgentState
   }
   deriving (Eq, Show)
 
-{- |
-Dynamic tool wrapper allowing heterogeneous tool collections
-Converts between Text and tool-specific input/output types.
-
-Example usage:
-
-> calculatorTool :: AnyTool
-> calculatorTool = customAnyTool
->   Calculator
->   (\t -> read (T.unpack t) :: (Int, Int))
->   (T.pack . show)
--}
 data AnyTool = forall a. Tool a => AnyTool
   { anyTool :: a
   , textToInput :: Text -> Input a
   , outputToText :: Output a -> Text
   }
 
-{- |
-Core agent class defining required operations
-
-* Plan next action based on state
-* Provide prompt template
-* Expose available tools
--}
 class Agent a where
   planNextAction :: BaseMemory m => a -> AgentState m -> IO (Either String AgentStep)
   agentPrompt :: a -> IO PromptTemplate
   agentTools :: a -> IO [AnyTool]
 
-{- |
-Agent execution engine
--}
-data AgentExecutor a m = AgentExecutor
-  { executor :: a -- Agent instance
-  , executorMemory :: m
-  -- ^ Memory state
-  , maxIterations :: Int
-  -- ^ Iteration limits
-  , returnIntermediateSteps :: Bool
-  -- ^ Step tracking
-  }
-  deriving (Eq, Show)
-
-{- |
-Run the full agent execution loop
-Handles:
-
-1. Memory updates
-2. Action planning
-3. Tool execution
-4. Iteration control
-
-Example flow:
-
-1. User input -> memory
-2. Plan action -> execute tool
-3. Store result -> memory
-4. Repeat until finish
-
-Throws errors for:
-
-- Tool not found [[5]]
-- Execution errors
-- Iteration limits
--}
 runAgent :: (Agent a, BaseMemory m) => a -> AgentState m -> Text -> IO (Either String AgentFinish)
 runAgent agent initialState@AgentState {..} initialInput = do
   memWithInput <- addUserMessage agentMemory initialInput
@@ -199,12 +128,6 @@ runSingleStep = planNextAction
 {- |
 Execute a single tool call
 Handles tool lookup and input/output conversion.
-
-Example:
-
-> tools = [calculatorTool, wikipediaTool]
-> executeTool tools "calculator" "(5, 3)"
-> -- Returns Right "8"
 -}
 executeTool :: [AnyTool] -> Text -> Text -> IO (Either String Text)
 executeTool tools toolName_ input =
@@ -222,55 +145,6 @@ executeTool tools toolName_ input =
 {- |
 Helper for creating custom tool wrappers
 Requires conversion functions between Text and tool-specific types.
-
-Example:
-
-> weatherTool = customAnyTool
->   WeatherAPI
->   parseLocation
->   formatWeatherResponse
 -}
 customAnyTool :: Tool a => a -> (Text -> Input a) -> (Output a -> Text) -> AnyTool
 customAnyTool tool inputConv outputConv = AnyTool tool inputConv outputConv
-
--- | Similar to runAgent, but for AgentExecutor
-runAgentExecutor ::
-  (Agent a, BaseMemory m) => AgentExecutor a m -> Text -> IO (Either String (Maybe AgentFinish))
-runAgentExecutor AgentExecutor {..} input = do
-  let initialState =
-        AgentState
-          { agentMemory = executorMemory
-          , agentToolResults = []
-          , agentSteps = []
-          }
-  result <- runAgent executor initialState input
-  case result of
-    Left err -> return $ Left err
-    Right a ->
-      if returnIntermediateSteps
-        then return $ Right $ Just a
-        else return $ Right Nothing
-
-{- |
-Runnable instance for agent execution
-Allows integration with LangChain workflows.
-
-Example:
-
-> response <- invoke myAgentExecutor "Solve 5+3"
-> case response of
->   Right result -> print result
->   Left err -> print err
--}
-instance (Agent a, BaseMemory m) => Run.Runnable (AgentExecutor a m) where
-  type RunnableInput (AgentExecutor a m) = Text
-  type RunnableOutput (AgentExecutor a m) = AgentFinish
-
-  invoke AgentExecutor {..} input = do
-    let initialState =
-          AgentState
-            { agentMemory = executorMemory
-            , agentToolResults = []
-            , agentSteps = []
-            }
-    runAgent executor initialState input

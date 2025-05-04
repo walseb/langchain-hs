@@ -1,11 +1,11 @@
 name:                langchain-hs
-version:             0.0.1.0
+version:             0.0.2.0
 github:              "tusharad/langchain-hs"
 license:             MIT
 author:              "tushar"
 maintainer:          "tusharadhatrao@gmail.com"
 copyright:           "2025 tushar"
-category:            Web
+category:            Web, AI
 synopsis:           "Haskell implementation of Langchain"
 extra-source-files:
 - README.md

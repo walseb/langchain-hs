@@ -1,4 +1,4 @@
-# Changelog for `langchain-haskell`
+# Changelog for `langchain-hs`
 
 All notable changes to this project will be documented in this file.
 
@@ -8,4 +8,28 @@ and this project adheres to the
 
 ## Unreleased
 
-## 0.1.0.0 - YYYY-MM-DD
+## 0.0.2.0 - 2025-05-04
+
+### Added
+
+- Added `OpenAI` LLM integration.
+- Added `DirectoryLoader` for loading Documents from a directory.
+- Added `HuggingFace` LLM integration.
+- Added docusaurus documentation.
+- Added `OpenAI` embeddings integration.
+- Added GHC CI matrix build.
+- Added `TokenBufferMemory` Memory integration.
+- Added `RetrievalQA` chain.
+- Added `CalculatorTool` tool.
+
+### Fixed 
+
+- Fixed `loadAndSplit` function for `PdfLoader`.
+- Minor documentation fixes.
+- Fixed `WebScraper` to only scrape textual content.
+- Made langchain-hs buildable till stack-lts-19.33
+- Fixed `React` agent.
+
+### Changed
+
+- Generalized LLMParams to accept different type per LLM. 

@@ -8,26 +8,57 @@ The `DocumentLoader` provides a unified interface for loading `Document` Types f
 
 ## Document
 
-In langchain-hs, a `Document` is a Haskell type with two fields 
-  - pageContent = The textual content of the document
-  - metadata = A map of text and `Value` containing extra information about the document. for e.g page number, links.
+```haskell
+data Document = Document
+  { pageContent :: Text
+  , metadata :: Map Text Value
+  }
+```
+
+The `Document` type is a simple data structure that contains two fields:
+- `pageContent`: A `Text` field that contains the content of the document.
+- `metadata`: A `Map` that contains metadata about the document. The keys are of type `Text`, and the values are of type `Value` (from the Aeson library).
 
 Document as Monoid instance, so two documents can be appended together.
 
 ## BaseLoader
 
-DocumentLoader provides a typeclass called `BaseLoader`. Every BaseLoader should provide implementation of two functions:
+```haskell
+class BaseLoader m where
+  load :: m -> IO (Either String [Document])
+  loadAndSplit :: m -> IO (Either String [Text])
+```
 
- - load 
- - loadAndSplit
+The `BaseLoader` typeclass defines two methods:
+- `load`: This method takes a `BaseLoader` instance and returns an `IO` action that produces either an error message or a list of `Document`s.
+- `loadAndSplit`: This method takes a `BaseLoader` instance and returns an `IO` action that produces either an error message or a list of `Text` chunks. This is useful for splitting the document into smaller pieces.
 
 ## Integrations 
 
 Right now, langchain-hs provides below integrations, with more integrations planned in the roadmap:
 
-- FileLoader = Load simple text files (uses readFile under the hood).
-- PdfLoader = Load pdf files (uses [pdf-toolbox](pdf-toolbox-document) under the hood).
-- DirectoryLoader = Takes a filePath of a directory and *recursively* reads all possible files. You can pass in recursion depth via params.
+- `FileLoader`: Loads documents from a file path.
+- `PdfLoader`: Loads documents from a PDF file path.
+- `DirectoryLoader`: Loads documents from a directory. It can recursively load files from subdirectories and filter files based on their extensions.
+
+**DiretoryLaoderOptions**
+
+```haskell
+data DirectoryLoaderOptions = DirectoryLoaderOptions
+  { recursiveDepth :: Maybe Int
+  , extensions :: [String]
+  , excludeHidden :: Bool
+  , useMultithreading :: Bool
+  }
+```
+
+The `DirectoryLoaderOptions` type is a data structure that contains options for loading documents from a directory. It has the following fields:
+- `recursiveDepth`: An optional `Int` that specifies the maximum depth of recursion when loading files from subdirectories. If `Nothing`, it will load files from all subdirectories.
+- `extensions`: A list of `String` that specifies the file extensions to include when loading files. If empty, it will load all files.
+- `excludeHidden`: A `Bool` that specifies whether to exclude hidden files (files starting with a dot) when loading files. The default is `True`.
+- `useMultithreading`: A `Bool` that specifies whether to use multithreading when loading files. The default is `False`.
+
+`defaultDirectoryLoaderOptions` is also provided.
 
 ## Examples 
 
@@ -92,13 +123,5 @@ runApp = do
     print docs
     print chunks
 ```
-
-### DirectoryLoaderOptions
-
-- recursiveDepth :: Maybe Int = Decide the depth of directory you should go in. The default is unlimited.
-- extensions :: [String] = List of extensions that want to load. For e.g [".txt", ".pdf"]
-- excludeHidden = Exclude hidden files or folders
-- useMultithreading = Apply multithreading, default is off.
-
 
 These documents are useful to embed into vector store and build RAG tools.

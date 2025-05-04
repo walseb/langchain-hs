@@ -6,16 +6,19 @@ import TabItem from '@theme/TabItem';
 
 # Quickstart: Langchain-hs
 
-### Requirements
+### Pre-requisites
 
-For using `Ollama LLM`, Make sure you have [Ollama](https://ollama.com/) installed.
+1. Install GHC and Stack via [GHCup](https://www.haskell.org/ghcup/)
+2. For Ollama, Download and install [Ollama](https://ollama.com/download) and make sure the model you want to use is installed. You can check the list of models using `ollama list` command or install a model using `ollama pull <model-name>` command. 
 
-### Add langchain-hs package in your dependancies 
+### Steps 
 
-```yaml title="stack.yaml"
-dependancies:
-  base,
-  langchain-hs
+- Add langchain-hs to your project
+
+```yaml title="package.yaml"
+dependencies:
+- base < 5
+- langchain-hs
 ```
 
 ### Example of generating response from a single prompt.
@@ -28,6 +31,7 @@ dependancies:
     {label: 'Huggingface', value: 'huggingface'}
   ]}>
   <TabItem value="ollama">
+
     ```haskell
     {-# LANGUAGE OverloadedStrings #-}
 
@@ -45,8 +49,23 @@ dependancies:
         Left err -> putStrLn $ "Generate error: " ++ err
         Right text -> putStrLn $ "Generated Text:\n" ++ T.unpack text
     ```
+
+In above code:
+
+1. Setup the `Ollama` LLM with the model name and optional list of callback functions.
+2. Call the `generate` function with the prompt and optional parameters.
+3. Handle the result, which can be either an error or the generated text.
+4. The `generate` function returns a `Text` response, which you can print or use as needed.
+
+:::warning
+
+For Ollama, Make sure the model that you want to use is installed on your local machine; else it will throw error.
+
+:::
   </TabItem>
+
   <TabItem value="openai">
+
   ```haskell
   {-# LANGUAGE OverloadedStrings #-}
 
@@ -68,8 +87,16 @@ main = do
     Left err -> putStrLn $ "Error: " ++ err
     Right response -> putStrLn response
     ```
+In above code:
+1. Setup the `OpenAI` LLM with the api key, model name and optional list of callback functions.
+2. Call the `generate` function with the prompt and optional parameters.
+3. Handle the result, which can be either an error or the generated text.
+4. The `generate` function returns a `Text` response, which you can print or use as needed.
+
   </TabItem>
-  <TabItem value="huggingface">
+
+ <TabItem value="huggingface">
+
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -93,19 +120,14 @@ runApp = do
       Left err -> putStrLn $ "Chat error: " ++ err
       Right response -> putStrLn $ "Chat Response:\n" ++ T.unpack response
 ```
+In above code:
+1. Setup the `Huggingface` LLM with the [provider](https://huggingface.co/docs/inference-providers/index), api key, model name and optional list of callback functions.
+2. Call the `generate` function with the prompt and optional parameters.
+3. Handle the result, which can be either an error or the generated text.
+4. The `generate` function returns a `Text` response, which you can print or use as needed.
+
   </TabItem>
 </Tabs>
-
-
-
-In above code, I have intialized the `Ollama` with model name `llama3.2`. Then I can simply call generate function with ollamaLLM and the prompt.
-It will either return a Error or the response Text.
-
-:::warning
-
-For Ollama, Make sure the model that you want to use is installed on your local machine. Else it will throw error.
-
-:::
 
 ### Example of generating response from a chat history
 
@@ -117,6 +139,7 @@ For Ollama, Make sure the model that you want to use is installed on your local 
     {label: 'Huggingface', value: 'huggingface'}
   ]}>
   <TabItem value="ollama">
+
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -139,10 +162,33 @@ runApp = do
     Left err -> putStrLn $ "Chat error: " ++ err
     Right response -> putStrLn $ "Chat Response:\n" ++ T.unpack response
 ```
-    </TabItem>
-    <TabItem value="openai">
+
+1. Setup the `Ollama` LLM with the model name and optional list of callback functions.
+2. Create a `chatHistory` using `fromList` with `Message` constructor.
+3. Call the `chat` function with the `chatHistory` and optional parameters.
+4. Handle the result, which can be either an error or the generated text.
+5. The `chat` function returns a `Text` response, which you can print or use as needed.
+
+:::warning
+For Ollama, Make sure the model that you want to use is installed on your local machine; else it will throw error.
+:::
+
+:::note
+`Message` constructor takes 3 parameters:
+1. `role`: The role of the message sender (System, User, Assistant).
+2. `content`: The content of the message (Text).
+3. `metadata`: Optional metadata for the message (A type containing a optinal name and optional list of toolnames) (Currently unstable).
+4. `defaultMessageData`: A default value for the metadata, which can be used if no specific metadata is provided.
+
+`chat` takes a `NonEmpty` list of `Message` as input. The `NonEmpty` type ensures that the list is not empty, which is important for chat history. 
+:::
+
+</TabItem>
+
+<TabItem value="openai">
+
   ```haskell
-  {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
@@ -166,8 +212,26 @@ main = do
     Left err -> putStrLn $ "Chat error: " ++ err
     Right response -> putStrLn $ "Chat Response:\n" ++ T.unpack response
     ```
-  </TabItem>
-  <TabItem value="huggingface">
+In above code:
+1. Setup the `OpenAI` LLM with the api key, model name and optional list of callback functions.
+2. Create a `chatHistory` using `fromList` with `Message` constructor.
+3. Call the `chat` function with the `chatHistory` and optional parameters.
+4. Handle the result, which can be either an error or the generated text.
+5. The `chat` function returns a `Text` response, which you can print or use as needed.
+
+:::note
+`Message` constructor takes 3 parameters:
+1. `role`: The role of the message sender (System, User, Assistant).
+2. `content`: The content of the message (Text).
+3. `metadata`: Optional metadata for the message (A type containing a optinal name and optional list of toolnames) (Currently unstable).
+4. `defaultMessageData`: A default value for the metadata, which can be used if no specific metadata is provided.
+`chat` takes a `NonEmpty` list of `Message` as input. The `NonEmpty` type ensures that the list is not empty, which is important for chat history.
+:::
+
+</TabItem>
+
+<TabItem value="huggingface">
+
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -195,11 +259,23 @@ runApp = do
       Left err -> putStrLn $ "Chat error: " ++ err
       Right response -> putStrLn $ "Chat Response:\n" ++ T.unpack response
 ```
-  </TabItem>
-    </Tabs>
+In above code:
+1. Setup the `Huggingface` LLM with the [provider](https://huggingface.co/docs/inference-providers/index), api key, model name and optional list of callback functions.
+2. Create a `chatHistory` using `fromList` with `Message` constructor.
+3. Call the `chat` function with the `chatHistory` and optional parameters.
+4. Handle the result, which can be either an error or the generated text.
+5. The `chat` function returns a `Text` response, which you can print or use as needed.
+:::note
+`Message` constructor takes 3 parameters:
+1. `role`: The role of the message sender (System, User, Assistant).
+2. `content`: The content of the message (Text).
+3. `metadata`: Optional metadata for the message (A type containing a optinal name and optional list of toolnames) (Currently unstable).
+4. `defaultMessageData`: A default value for the metadata, which can be used if no specific metadata is provided.
+`chat` takes a `NonEmpty` list of `Message` as input. The `NonEmpty` type ensures that the list is not empty, which is important for chat history.
+:::
 
-
-There are several helper functions provided to manipulate `chatHistory`
+</TabItem>
+</Tabs>
 
 ### Example of streaming response
 
@@ -210,7 +286,9 @@ There are several helper functions provided to manipulate `chatHistory`
     {label: 'OpenAI', value: 'openai'},
     {label: 'Huggingface', value: 'huggingface'}
   ]}>
-  <TabItem value="ollama">
+
+<TabItem value="ollama">
+
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -235,8 +313,32 @@ main = do
     Left err -> putStrLn $ "Chat error: " ++ err
     Right _ -> pure ()
 ```
-    </TabItem>
-    <TabItem value="openai">
+In above code:
+1. Setup the `Ollama` LLM with the model name and optional list of callback functions.
+2. Create a `chatHistory` using `fromList` with `Message` constructor.
+3. Create a `StreamHandler` with `onToken` and `onComplete` functions.
+4. Call the `stream` function with the `chatHistory`, `StreamHandler` and optional parameters.
+5. Handle the result, which can be either an error or unit.
+6. The `stream` function returns a unit and the `onToken` function will be called for each token generated. 
+
+:::note
+The StreamHandler takes two functions:
+1. `onToken`: A function that takes a `Text` and returns `IO ()`. This function will be called for each token generated.
+2. `onComplete`: A function that takes a `Text` and returns `IO ()`. This function will be called when the streaming is complete.
+:::
+
+:::note
+`Message` constructor takes 3 parameters:
+1. `role`: The role of the message sender (System, User, Assistant).
+2. `content`: The content of the message (Text).
+3. `metadata`: Optional metadata for the message (A type containing a optinal name and optional list of toolnames) (Currently unstable).
+4. `defaultMessageData`: A default value for the metadata, which can be used if no specific metadata is provided.
+`stream` takes a `NonEmpty` list of `Message` as input. The `NonEmpty` type ensures that the list is not empty, which is important for chat history.
+:::
+</TabItem>
+
+<TabItem value="openai">
+
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -269,8 +371,33 @@ runApp = do
         Left err -> putStrLn $ "Chat error: " ++ err
         Right _ -> pure ()
         ```
-    </TabItem>
-    <TabItem value="huggingface">
+In above code:
+1. Setup the `OpenAI` LLM with the api key, model name and optional list of callback functions.
+2. Create a `chatHistory` using `fromList` with `Message` constructor.
+3. Create a `StreamHandler` with `onToken` and `onComplete` functions.
+4. Call the `stream` function with the `chatHistory`, `StreamHandler` and optional parameters.
+5. Handle the result, which can be either an error or unit.
+6. The `stream` function returns a unit and the `onToken` function will be called for each token generated.
+
+:::note
+The StreamHandler takes two functions:
+1. `onToken`: A function that takes a `Text` and returns `IO ()`. This function will be called for each token generated.
+2. `onComplete`: A function that takes a `Text` and returns `IO ()`. This function will be called when the streaming is complete.
+:::
+
+:::note
+`Message` constructor takes 3 parameters:
+1. `role`: The role of the message sender (System, User, Assistant).
+2. `content`: The content of the message (Text).
+3. `metadata`: Optional metadata for the message (A type containing a optinal name and optional list of toolnames) (Currently unstable).
+4. `defaultMessageData`: A default value for the metadata, which can be used if no specific metadata is provided.
+`stream` takes a `NonEmpty` list of `Message` as input. The `NonEmpty` type ensures that the list is not empty, which is important for chat history.
+:::
+
+</TabItem>
+
+<TabItem value="huggingface">
+
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -301,7 +428,28 @@ runApp = do
         Left err -> putStrLn $ "Chat error: " ++ err
         Right _ -> pure ()
         ```
-    </TabItem>
-    </Tabs>
+In above code:
 
-For streaming you are supposed to send a callback function. The callback function will be called for each token generated.
+1. Setup the `Huggingface` LLM with the [provider](https://huggingface.co/docs/inference-providers/index), api key, model name and optional list of callback functions.
+2. Create a `chatHistory` using `fromList` with `Message` constructor.
+3. Create a `StreamHandler` with `onToken` and `onComplete` functions.
+4. Call the `stream` function with the `chatHistory`, `StreamHandler` and optional parameters.
+5. Handle the result, which can be either an error or unit.
+6. The `stream` function returns a unit and the `onToken` function will be called for each token generated.
+
+:::note
+The StreamHandler takes two functions:
+1. `onToken`: A function that takes a `Text` and returns `IO ()`. This function will be called for each token generated.
+2. `onComplete`: A function that takes a `Text` and returns `IO ()`. This function will be called when the streaming is complete.
+:::
+
+:::note
+`Message` constructor takes 3 parameters:
+1. `role`: The role of the message sender (System, User, Assistant).
+2. `content`: The content of the message (Text).
+3. `metadata`: Optional metadata for the message (A type containing a optinal name and optional list of toolnames) (Currently unstable).
+4. `defaultMessageData`: A default value for the metadata, which can be used if no specific metadata is provided.
+`stream` takes a `NonEmpty` list of `Message` as input. The `NonEmpty` type ensures that the list is not empty, which is important for chat history.
+:::
+</TabItem>
+</Tabs>

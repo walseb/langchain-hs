@@ -3,8 +3,21 @@ sidebar_position: 10
 ---
 
 # Text Splitter
-`TextSplitter` typeclass provides an interface to split text into smaller chunks. This is useful for processing large texts, such as documents or articles, into manageable pieces.
-It is used in conjunction with the `VectorStore` typeclass to split documents into smaller chunks for embedding and retrieval. The `TextSplitter` typeclass defines methods for splitting text based on various criteria, such as size, number of tokens, or specific delimiters.
-It also provides methods for managing the metadata associated with the chunks, such as their IDs and distances. The `TextSplitter` typeclass is designed
 
-`splitText` to be flexible and extensible, allowing developers to implement their own text splitters with custom splitting algorithms and criteria. `CharacterSplitterOps` is a type. `defaultCharacterSplitterOps` is a default value for `CharacterSplitterOps`.
+## Overview
+
+The `TextSplitter` is a utility that allows you to split text into smaller chunks. This is particularly useful when dealing with large documents or when you need to process text in smaller segments.
+
+langchain-hs provides `splitText` function that can be used to split text into smaller chunks. The function takes a string as input, `CharacterSplitterOps` type and returns a list of strings, each representing a chunk of the original text.
+
+```haskell
+splitText :: CharacterSplitterOps -> Text -> [Text]
+```
+
+```haskell
+data CharacterSplitterOps = CharacterSplitterOps
+  { chunkSize :: Int
+  , separator :: Text
+  }
+  deriving (Show, Eq)
+```

@@ -36,8 +36,6 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
           editUrl:
             'https://github.com/tusharad/langchain-hs',
         },
@@ -55,7 +53,8 @@ const config: Config = {
       title: 'Langchain-hs',
       logo: {
         alt: 'Langchain-hs logo',
-        src: 'img/langchain.png',
+        src: 'img/langchain-light-back.png',
+        srcDark: 'img/langchain.png',
       },
       items: [
         {
@@ -68,7 +67,6 @@ const config: Config = {
             label: "Go Docs",
             position: "left",
           },
-          // Please keep GitHub link to the right for consistency.
           {
             href: "https://github.com/tusharad/langchain-hs",
             label: "GitHub",
@@ -84,14 +82,17 @@ const config: Config = {
           items: [
             {
               label: 'Tutorial',
-              to: '/docs/intro',
+              to: '/docs/category/concepts-and-examples',
             },
           ],
         },
         {
           title: 'Community',
           items: [
-            
+            {
+              label: 'Github',
+              to: 'https://github.com/tusharad/lanchain-hs',
+            },
           ],
         },
         {
@@ -104,11 +105,11 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Tushar Adhatrao, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Tushar, Inc. Built with Docusaurus.`,
     },
     prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      theme: prismThemes.gruvboxMaterialLight,
+      darkTheme: prismThemes.gruvboxMaterialDark,
       additionalLanguages: ['haskell']
     },
   } satisfies Preset.ThemeConfig,

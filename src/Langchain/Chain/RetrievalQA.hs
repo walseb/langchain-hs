@@ -8,6 +8,8 @@ Description : Chain for question-answering against an index.
 Copyright   : (c) 2025 Tushar Adhatrao
 License     : MIT
 Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
+
+Haskell implementation of RetrievalQA.
 -}
 module Langchain.Chain.RetrievalQA
   ( RetrievalQA (..)

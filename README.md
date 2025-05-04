@@ -2,9 +2,17 @@
 
 ⚡ Building applications with LLMs through composability in Haskell! ⚡
 
+<div style="text-align: center;">
+<img src="./docs/static/img/langchain_haskell.jpg" alt="logo image" height="300"/>
+</div>
+
 ## Introduction
 
 LangChain Haskell is a robust port of the original [LangChain](https://github.com/langchain-ai/langchain) library, bringing its powerful natural language processing capabilities to the Haskell ecosystem. This library enables developers to build applications powered by large language models (LLMs) with ease and flexibility.
+
+### [Documentation](https://tusharad.github.io/langchain-hs/docs/)
+### [Hackage API reference](https://hackage.haskell.org/package/langchain-hs)
+
 
 ## Features
 
@@ -13,10 +21,16 @@ LangChain Haskell is a robust port of the original [LangChain](https://github.co
 - **Memory Management**: Implement conversational memory to maintain context across interactions.
 - **Agents and Tools**: Develop agents that can utilize tools to perform complex tasks.
 - **Document Loaders**: Load and process documents from various sources for use in your applications.
+- **Text Splitter**: Components for splitting text into smaller chunks for processing.
+- **Output Parser**: Components for parsing and processing the output of LLMs.
+- **VectorStore and Retriever**: Mechanism for storing and retrieving document embeddings.
+- **Embeddings**: Components for generating vector representations of text.
 
 ## Current Supported Providers
 
   - Ollama
+  - OpenAI
+  - Huggingface
   - More to come...
 
 ## Installation
@@ -26,7 +40,7 @@ If you're using Stack, include it in your `package.yaml`:
 
 ```yaml
 dependencies:
-  - base >= 4.7 && < 5
+  - base < 5
   - langchain-hs
 ```
 Then, run the build command for your respective build tool to fetch and compile the dependency.
@@ -60,18 +74,6 @@ main = do
         Left err -> putStrLn $ "Error: " ++ err
         Right response -> putStrLn $ "Translation: " ++ (T.unpack response)
 ```
-
-## Documentation
-
-Documentation will soon be available on hackage.
-
-## Examples
-
-Explore the `examples` directory in the repository for more use cases, including:
-
-- **Conversational Agents**: Building chatbots that maintain context.
-- **Document Q&A**: Answering questions based on the content of provided documents.
-- **Tool Use**: Creating agents that can use external tools to fetch information or perform calculations.
 
 ## Contributing
 

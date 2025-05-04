@@ -8,9 +8,7 @@ Copyright   : (c) 2025 Tushar Adhatrao
 License     : MIT
 Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
 
-Agents use LLMs as reasoning engines to determine actions dynamically
-This module implements the core agent execution loop and interfaces,
-supporting tool interaction and memory management.
+Agents use LLMs as reasoning engines to determine actions dynamically. 
 -}
 module Langchain.Agents.Core
   ( AgentAction (..)
@@ -71,17 +69,23 @@ data (BaseMemory m) => AgentState m = AgentState
   }
   deriving (Eq, Show)
 
+-- | A type that helps various types of Tools
+-- It encapsulates the Tool, and conversion functions 
+-- to and from Text for Tool input and output since Agent takes and returns Text. 
+-- If Tool takes or returns Text type itself you can use `id` at these places.
 data AnyTool = forall a. Tool a => AnyTool
   { anyTool :: a
   , textToInput :: Text -> Input a
   , outputToText :: Output a -> Text
   }
 
+-- | Typeclass for Agent
 class Agent a where
   planNextAction :: BaseMemory m => a -> AgentState m -> IO (Either String AgentStep)
   agentPrompt :: a -> IO PromptTemplate
   agentTools :: a -> IO [AnyTool]
 
+-- | Function that *starts* the agent process.
 runAgent :: (Agent a, BaseMemory m) => a -> AgentState m -> Text -> IO (Either String AgentFinish)
 runAgent agent initialState@AgentState {..} initialInput = do
   memWithInput <- addUserMessage agentMemory initialInput

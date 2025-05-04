@@ -15,25 +15,14 @@ Haskell implementation of LangChain's embedding model abstraction, providing:
 Example usage:
 
 @
--- Hypothetical HuggingFace embedding instance
-data HuggingFaceEmbeddings = HuggingFaceEmbeddings
-
-instance Embeddings HuggingFaceEmbeddings where
-  embedDocuments _ docs = do
-    -- Convert documents to vectors using HuggingFace API
-    return $ Right [[0.1, 0.3, ...], ...]
-
-  embedQuery _ query = do
-    -- Convert query to vector
-    return $ Right [0.2, 0.4, ...]
-
--- Usage with loaded documents
-docs <- load (FileLoader "data.txt")
-case docs of
-  Right documents -> do
-    vectors <- embedDocuments HuggingFaceEmbeddings documents
-    -- Use vectors for semantic search
-  Left err -> print err
+  let oEmbed = defaultOpenAIEmbeddings { apiKey = "api-key" }
+  let p = PdfLoader "/home/user/Documents/TS/langchain/SOP.pdf"
+  eDocs <- load p
+  case eDocs of
+    Left err -> error err
+    Right docs -> do
+      eRes <- embedQuery oEmbed "Hello"
+      print eRes
 @
 -}
 module Langchain.Embeddings.Core

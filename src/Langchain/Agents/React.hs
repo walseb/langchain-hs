@@ -1,11 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Langchain.Agents.React (
-    defaultReactPromptTemplate 
+{- |
+Module      : Langchain.Agents.React
+Description : Implementation of ReAct logic
+Copyright   : (c) 2025 Tushar Adhatrao
+License     : MIT
+Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
+
+ReAct forces LLM to reflect on your question and injects responses as if LLM figured them out by itself. 
+This allows you to connect any datasource or tool tou your LLM.
+-}
+module Langchain.Agents.React
+  ( defaultReactPromptTemplate
   , runReactAgent
-  , ReactAgent(..)
- ) where
+  , ReactAgent (..)
+  ) where
 
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)

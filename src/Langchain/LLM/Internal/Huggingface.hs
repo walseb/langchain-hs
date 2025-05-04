@@ -243,7 +243,7 @@ instance FromJSON ContentObject where
       <*> v .:? "text"
       <*> v .:? "image_url"
 
--- \| Message could be either simple text or an object
+-- | Message could be either simple text or an object
 data MessageContent = MessageContent [ContentObject] | TextContent Text
   deriving (Eq, Show)
 
@@ -285,7 +285,7 @@ instance FromJSON Message where
       <*> v .: "content"
       <*> v .:? "name"
 
-{- $providers
+{- | $providers
 Supported providers and their API endpoints:
 
 - Cerebras: @https://router.huggingface.co/cerebras/...
@@ -510,6 +510,7 @@ instance FromJSON Delta where
     Delta
       <$> v .:? "content"
 
+-- | Represents type for choice object from stream response
 data ChoiceChunk = ChoiceChunk
   { delta :: Delta
   , choiceFinishReason :: Maybe Text
@@ -524,6 +525,7 @@ instance FromJSON ChoiceChunk where
       <*> v .:? "finish_reason"
       <*> v .: "index"
 
+-- | Represent type for usage object from stream response
 data ChunkUsage = ChunkUsage
   { promptTokens :: Int
   , usageCompletionTokens :: Int
@@ -538,6 +540,7 @@ instance FromJSON ChunkUsage where
       <*> v .: "completion_tokens"
       <*> v .: "total_tokens"
 
+-- | Represents type for timeinfo object from stream reponse
 data ChunkTimeInfo = ChunkTimeInfo
   { timeInfoQueueTime :: Double
   , timeInfoPromptTime :: Double
@@ -556,6 +559,7 @@ instance FromJSON ChunkTimeInfo where
       <*> v .: "total_time"
       <*> v .: "created"
 
+-- | Type that represents stream response
 data ChatCompletionChunk = ChatCompletionChunk
   { chatCompletionChunkId :: Text
   , chunkChoices :: [ChoiceChunk]
@@ -620,6 +624,7 @@ data HuggingfaceStreamHandler = HuggingfaceStreamHandler
   -- ^ Callback when the stream is complete
   }
 
+-- | Default values for stream handling in Huggingface LLM
 defaultHuggingfaceStreamHandler :: HuggingfaceStreamHandler
 defaultHuggingfaceStreamHandler =
   HuggingfaceStreamHandler
@@ -627,7 +632,7 @@ defaultHuggingfaceStreamHandler =
     , onComplete = pure ()
     }
 
--- Streaming function for huggingface
+-- | Streaming function for huggingface
 createChatCompletionStream ::
   Text -> HuggingfaceChatCompletionRequest -> HuggingfaceStreamHandler -> IO (Either String ())
 createChatCompletionStream apiKey r HuggingfaceStreamHandler {..} = do

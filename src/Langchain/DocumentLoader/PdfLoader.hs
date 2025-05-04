@@ -8,11 +8,7 @@ License     : MIT
 Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
 Stability   : experimental
 
-This module provides a loader for PDF files by implementing the
-'BaseLoader' interface from "Langchain.DocumentLoader.Core". It uses
-the 'Pdf.Document' library to open a PDF and extract its content, turning
-each page into a 'Document'. Additionally, it provides a method to load the
-raw content of the file and split it using a recursive character splitter.
+This module provides a loader for loading PDF files. 
 -}
 module Langchain.DocumentLoader.PdfLoader
   ( PdfLoader (..)

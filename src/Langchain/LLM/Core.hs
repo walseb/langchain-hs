@@ -8,6 +8,7 @@
 Module:      Langchain.LLM.Core
 Copyright:   (c) 2025 Tushar Adhatrao
 License:     MIT
+Description: Core implementation of langchain chat models
 Maintainer:  Tushar Adhatrao <tusharadhatrao@gmail.com>
 Stability:   experimental
 
@@ -19,8 +20,10 @@ and modularity.
 The main components include:
 
 * The 'LLM' typeclass, which defines the interface for language models.
-* Data types such as 'Params' for configuring model invocations, 'Message' for conversation messages,
+
+* Data types such as 'Message' for conversation messages,
   and 'StreamHandler' for handling streaming responses.
+
 * Default values like 'defaultParams' and 'defaultMessageData' for convenience.
 
 This module is intended to be used as the foundation for building applications that interact with LLMs,
@@ -145,45 +148,14 @@ defaultMessageData =
     , toolCalls = Nothing
     }
 
-{- | Typeclass defining the interface for language models.
-This provides methods for invoking the model, chatting with it, and streaming
-responses.
-
-@
-data TestLLM = TestLLM
-  { responseText :: Text
-  , shouldSucceed :: Bool
-  }
-
-instance LLM TestLLM where
-  generate m _ _ = pure $ if shouldSucceed m
-    then Right (responseText m)
-    else Left "Test error"
-@
-
-
-@
-ollamaLLM = Ollama "llama3.2:latest" [stdOutCallback]
-response <- generate ollamaLLM "What is Haskell?" Nothing
-@
--}
+-- | Typeclass that all ChatModels should interface with
 class LLM m where
-  -- | Invoke the language model with a single prompt.
-  --        Suitable for simple queries; returns either an error or generated text.
+  -- | Define the Parameter type for your LLM model.
   type LLMParams m
 
-  {- === Using 'generate'
-  To invoke an LLM with a single prompt:
   
-  @
-  let myLLM = ... -- assume this is an instance of LLM
-  result <- generate myLLM "What is the meaning of life?" Nothing
-  case result of
-    Left err -> putStrLn $ "Error: " ++ err
-    Right response -> putStrLn response
-  @
-
-  -}
+  -- | Invoke the language model with a single prompt.
+  --        Suitable for simple queries; returns either an error or generated text.
   generate :: m -- ^ The type of the language model instance.
     -> Text -- ^ The prompt to send to the model.
     -> Maybe (LLMParams m) -- ^ Optional configuration parameters.

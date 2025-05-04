@@ -69,23 +69,6 @@ go embResp =
     Nothing -> Left "Embeddings are empty"
     Just x -> Right x
 
-{- | Ollama implementation of the 'Embeddings' interface [[6]].
-Uses Ollama's embedding API for vector generation. Handles:
-- Multiple document embedding via batch processing
-- Query embedding for similarity searches
-- Error propagation from API responses
-
-Example instance usage:
-@
--- Embed multiple documents
-docs <- load (FileLoader "data.txt")
-case docs of
-  Right documents -> do
-    vecs <- embedDocuments ollamaEmb documents
-    -- Use vectors for semantic search
-  Left err -> print err
-@
--}
 instance Embeddings OllamaEmbeddings where
   -- \| Document embedding implementation [[3]]:
   --  Processes each document individually through Ollama's API.

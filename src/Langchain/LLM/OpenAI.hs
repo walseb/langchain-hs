@@ -19,8 +19,6 @@ The 'LLM' instance methods ('generate', 'chat', 'stream') allow for seamless int
 
 For more information on OpenAI's API, see: <https://platform.openai.com/docs/api-reference>
 
-### Example Usage
-
 @
 import Data.Text (Text)
 import qualified Langchain.LLM.Core as LLM
@@ -40,8 +38,11 @@ main = do
 @
 -}
 module Langchain.LLM.OpenAI
-  ( OpenAI (..)
+  ( 
+    -- * Types
+    OpenAI (..)
   , OpenAIParams (..)
+    -- * Default functions
   , defaultOpenAIParams
   ) where
 

@@ -32,6 +32,7 @@ module Langchain.Tool.Core
   ( Tool (..)
   ) where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Text (Text)
 
 {- | Typeclass defining the interface for tools that can be used with LLMs.
@@ -84,3 +85,7 @@ class Tool a where
   -- >   putStrLn "Calculating..."
   -- >   pure (a + b)
   runTool :: a -> Input a -> IO (Output a)
+
+  -- | MonadIO version of runTool
+  runToolM :: MonadIO m => a -> Input a -> m (Output a)
+  runToolM tool toolInput = liftIO $ runTool tool toolInput

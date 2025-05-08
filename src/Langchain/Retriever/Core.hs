@@ -35,6 +35,7 @@ module Langchain.Retriever.Core
   , VectorStoreRetriever (..)
   ) where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Langchain.DocumentLoader.Core (Document)
 import Langchain.Runnable.Core
 import Langchain.VectorStore.Core
@@ -63,6 +64,9 @@ class Retriever a where
   --   >>> _get_relevant_documents (VectorStoreRetriever myStore) "AI"
   --   Right [Document "AI definition...", ...]
   _get_relevant_documents :: a -> Text -> IO (Either String [Document])
+
+  _get_relevant_documentsM :: MonadIO m => a -> Text -> m (Either String [Document])
+  _get_relevant_documentsM retriever query = liftIO $ _get_relevant_documents retriever query
 
 {- | Vector store-backed retriever implementation
 Wraps any 'VectorStore' instance to provide similarity-based retrieval.

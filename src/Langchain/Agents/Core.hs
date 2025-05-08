@@ -8,7 +8,7 @@ Copyright   : (c) 2025 Tushar Adhatrao
 License     : MIT
 Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
 
-Agents use LLMs as reasoning engines to determine actions dynamically. 
+Agents use LLMs as reasoning engines to determine actions dynamically.
 -}
 module Langchain.Agents.Core
   ( AgentAction (..)
@@ -25,6 +25,7 @@ module Langchain.Agents.Core
   ) where
 
 import Control.Exception (SomeException, try)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.List (find)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
@@ -49,30 +50,35 @@ data AgentAction = AgentAction
 
 -- | Represents that agent has finished work with final value
 data AgentFinish = AgentFinish
-  { returnValues :: Map.Map Text Text 
+  { returnValues :: Map.Map Text Text
   , finishLog :: Text
   }
   deriving (Show, Eq)
 
--- | Type that will be return from LLM 
--- Could be either Continue, making another call to LLM or Finish with final value
+{- | Type that will be return from LLM
+Could be either Continue, making another call to LLM or Finish with final value
+-}
 data AgentStep
   = Continue AgentAction
   | Finish AgentFinish
   deriving (Eq, Show)
 
--- | Type for maintaining state of the agent 
+-- | Type for maintaining state of the agent
 data (BaseMemory m) => AgentState m = AgentState
-  { agentMemory :: m -- ^ Memory for storing chat history
-  , agentToolResults :: [(Text, Text)] -- ^ Tool results
-  , agentSteps :: [AgentAction] -- ^ Agent steps happened so far
+  { agentMemory :: m
+  -- ^ Memory for storing chat history
+  , agentToolResults :: [(Text, Text)]
+  -- ^ Tool results
+  , agentSteps :: [AgentAction]
+  -- ^ Agent steps happened so far
   }
   deriving (Eq, Show)
 
--- | A type that helps various types of Tools
--- It encapsulates the Tool, and conversion functions 
--- to and from Text for Tool input and output since Agent takes and returns Text. 
--- If Tool takes or returns Text type itself you can use `id` at these places.
+{- | A type that helps various types of Tools
+It encapsulates the Tool, and conversion functions
+to and from Text for Tool input and output since Agent takes and returns Text.
+If Tool takes or returns Text type itself you can use `id` at these places.
+-}
 data AnyTool = forall a. Tool a => AnyTool
   { anyTool :: a
   , textToInput :: Text -> Input a
@@ -84,6 +90,19 @@ class Agent a where
   planNextAction :: BaseMemory m => a -> AgentState m -> IO (Either String AgentStep)
   agentPrompt :: a -> IO PromptTemplate
   agentTools :: a -> IO [AnyTool]
+
+  planNextActionM ::
+    (BaseMemory mem, MonadIO m) =>
+    a ->
+    AgentState mem ->
+    m (Either String AgentStep)
+  planNextActionM agent agentState = liftIO $ planNextAction agent agentState
+
+  agentPromptM :: MonadIO m => a -> m PromptTemplate
+  agentPromptM = liftIO . agentPrompt
+
+  agentToolsM :: MonadIO m => a -> m [AnyTool]
+  agentToolsM = liftIO . agentTools
 
 -- | Function that *starts* the agent process.
 runAgent :: (Agent a, BaseMemory m) => a -> AgentState m -> Text -> IO (Either String AgentFinish)

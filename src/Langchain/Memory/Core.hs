@@ -38,6 +38,7 @@ module Langchain.Memory.Core
   , initialChatMessage
   ) where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import Langchain.LLM.Core (ChatMessage, Message (..), Role (..), defaultMessageData)
@@ -54,21 +55,36 @@ instance BaseMemory MyMemory where
   addUserMessage = ...
 @
 -}
-class BaseMemory m where
+class BaseMemory mem where
   -- | Retrieve current chat history
-  messages :: m -> IO (Either String ChatMessage)
+  messages :: mem -> IO (Either String ChatMessage)
 
   -- | Add user message to history
-  addUserMessage :: m -> Text -> IO (Either String m)
+  addUserMessage :: mem -> Text -> IO (Either String mem)
 
   -- | Add AI response to history
-  addAiMessage :: m -> Text -> IO (Either String m)
+  addAiMessage :: mem -> Text -> IO (Either String mem)
 
   -- | Add generic message to history
-  addMessage :: m -> Message -> IO (Either String m)
+  addMessage :: mem -> Message -> IO (Either String mem)
 
   -- | Reset memory to initial state
-  clear :: m -> IO (Either String m)
+  clear :: mem -> IO (Either String mem)
+
+  messagesM :: MonadIO m => mem -> m (Either String ChatMessage)
+  messagesM = liftIO . messages
+
+  addUserMessageM :: MonadIO m => mem -> Text -> m (Either String mem)
+  addUserMessageM mem msg = liftIO $ addUserMessage mem msg
+
+  addAiMessageM :: MonadIO m => mem -> Text -> m (Either String mem)
+  addAiMessageM mem msg = liftIO $ addAiMessage mem msg
+
+  addMessageM :: MonadIO m => mem -> Message -> m (Either String mem)
+  addMessageM mem msg = liftIO $ addMessage mem msg
+
+  clearM :: MonadIO m => mem -> m (Either String mem)
+  clearM mem = liftIO $ clear mem
 
 {- | Sliding window memory implementation.
 Stores chat history with maximum size limit.
@@ -86,7 +102,7 @@ data WindowBufferMemory = WindowBufferMemory
   -- ^ Maximum number of messages to retain
   -- ^ It is user's responsiblity to make sure the number is > 0.
   , windowBufferMessages :: ChatMessage
-  -- ^ Current message buffer 
+  -- ^ Current message buffer
   }
   deriving (Show, Eq)
 
@@ -111,23 +127,23 @@ instance BaseMemory WindowBufferMemory where
   --  >>> addMessage mem msg3
   --  Right (WindowBufferMemory {windowBufferMessages = [msg2, msg3]})
   --
-  addMessage winBuffMem@WindowBufferMemory{..} newMsg = do
+  addMessage winBuffMem@WindowBufferMemory {..} newMsg = do
     let currentMsgs = NE.toList windowBufferMessages
         newMsgs = currentMsgs ++ [newMsg]
 
     if length newMsgs > maxWindowSize
-        then do
-            let trimmedMsgs = removeOldestNonSystem newMsgs
-            pure $ Right $ winBuffMem { windowBufferMessages = NE.fromList trimmedMsgs }
-        else
-            pure $ Right $ winBuffMem { windowBufferMessages = NE.fromList newMsgs }
+      then do
+        let trimmedMsgs = removeOldestNonSystem newMsgs
+        pure $ Right $ winBuffMem {windowBufferMessages = NE.fromList trimmedMsgs}
+      else
+        pure $ Right $ winBuffMem {windowBufferMessages = NE.fromList newMsgs}
     where
       isSystem (Message role _ _) = role == System
-      
+
       removeOldestNonSystem = go
         where
           go [] = []
-          go (m:ms)
+          go (m : ms)
             | isSystem m = m : go ms
             | otherwise = ms
 

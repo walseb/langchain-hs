@@ -30,6 +30,7 @@ module Langchain.Embeddings.Core
     Embeddings (..)
   ) where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Text (Text)
 import Langchain.DocumentLoader.Core
 
@@ -53,7 +54,7 @@ instance Embeddings TestEmbeddings where
   embedQuery _ _ = return $ Right [0.4, 0.5, 0.6]
 @
 -}
-class Embeddings m where
+class Embeddings embed where
   -- | Convert documents to embedding vectors
   --
   --   Example:
@@ -61,7 +62,10 @@ class Embeddings m where
   --   >>> let doc = Document "Hello world" mempty
   --   >>> embedDocuments TestEmbeddings [doc]
   --   Right [[0.1, 0.2, 0.3]]
-  embedDocuments :: m -> [Document] -> IO (Either String [[Float]])
+  embedDocuments :: embed -> [Document] -> IO (Either String [[Float]])
+
+  embedDocumentsM :: MonadIO m => embed -> [Document] -> m (Either String [[Float]])
+  embedDocumentsM embeddings docs = liftIO $ embedDocuments embeddings docs
 
   -- | Convert query text to embedding vector
   --
@@ -69,7 +73,10 @@ class Embeddings m where
   --
   --   >>> embedQuery TestEmbeddings "Search query"
   --   Right [0.4, 0.5, 0.6]
-  embedQuery :: m -> Text -> IO (Either String [Float])
+  embedQuery :: embed -> Text -> IO (Either String [Float])
+
+  embedQueryM :: MonadIO m => embed -> Text -> m (Either String [Float])
+  embedQueryM embeddings query = liftIO $ embedQuery embeddings query
 
 {- $examples
 Test case patterns:

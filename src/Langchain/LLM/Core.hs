@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 
 {- |
 Module:      Langchain.LLM.Core
@@ -44,6 +44,7 @@ module Langchain.LLM.Core
   , defaultMessageData
   ) where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson
 import Data.List.NonEmpty
 import Data.Text (Text)
@@ -79,10 +80,16 @@ data Role
   | -- | Tool role, for tool outputs or interactions
     Tool
   | Developer
-    -- | Special role for developer messages. Specific to only some integrations
-  | Function
-    -- | Function call messages. Specific to only some integrations
-  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+  | -- | Special role for developer messages. Specific to only some integrations
+    Function
+  deriving
+    ( -- | Function call messages. Specific to only some integrations
+      Eq
+    , Show
+    , Generic
+    , ToJSON
+    , FromJSON
+    )
 
 {- | Represents a message in a conversation, including the sender's role, content,
 and additional metadata.
@@ -149,26 +156,70 @@ defaultMessageData =
     }
 
 -- | Typeclass that all ChatModels should interface with
-class LLM m where
+class LLM llm where
   -- | Define the Parameter type for your LLM model.
-  type LLMParams m
+  type LLMParams llm
 
-  
   -- | Invoke the language model with a single prompt.
   --        Suitable for simple queries; returns either an error or generated text.
-  generate :: m -- ^ The type of the language model instance.
-    -> Text -- ^ The prompt to send to the model.
-    -> Maybe (LLMParams m) -- ^ Optional configuration parameters.
-    -> IO (Either String Text)
+  generate ::
+    -- | The type of the language model instance.
+    llm ->
+    -- | The prompt to send to the model.
+    Text ->
+    -- | Optional configuration parameters.
+    Maybe (LLMParams llm) ->
+    IO (Either String Text)
 
   -- | Chat with the language model using a sequence of messages.
   -- Suitable for multi-turn conversations; returns either an error or the response.
-  --
-  chat :: m -- ^ The type of the language model instance.
-    -> ChatMessage -- ^ A non-empty list of messages to send to the model.
-    -> Maybe (LLMParams m) -- ^ Optional configuration parameters.
-    -> IO (Either String Text) -- ^ The result of the chat, either an error or the response text.
+  chat ::
+    -- | The type of the language model instance.
+    llm ->
+    -- | A non-empty list of messages to send to the model.
+    ChatMessage ->
+    -- | Optional configuration parameters.
+    Maybe (LLMParams llm) ->
+    -- | The result of the chat, either an error or the response text.
+    IO (Either String Text)
 
   -- | Stream responses from the language model for a sequence of messages.
   -- Uses callbacks to process tokens in real-time; returns either an error or unit.
-  stream :: m -> ChatMessage -> StreamHandler -> Maybe (LLMParams m) -> IO (Either String ())
+  stream :: llm -> ChatMessage -> StreamHandler -> Maybe (LLMParams llm) -> IO (Either String ())
+
+  -- Default implementations
+
+  -- | MonadIO version of generate
+  generateM ::
+    MonadIO m =>
+    -- | The type of the language model instance.
+    llm ->
+    -- | The prompt to send to the model.
+    Text ->
+    -- | Optional configuration parameters.
+    Maybe (LLMParams llm) ->
+    m (Either String Text)
+  generateM llm prompt mbParams = liftIO $ generate llm prompt mbParams
+
+  -- | MonadIO version of chat
+  chatM ::
+    MonadIO m =>
+    -- | The type of the language model instance.
+    llm ->
+    -- | A non-empty list of messages to send to the model.
+    ChatMessage ->
+    -- | Optional configuration parameters.
+    Maybe (LLMParams llm) ->
+    -- | The result of the chat, either an error or the response text.
+    m (Either String Text)
+  chatM llm chatHistory mbParams = liftIO $ chat llm chatHistory mbParams
+
+  -- | MonadIO version of stream
+  streamM ::
+    MonadIO m =>
+    llm ->
+    ChatMessage ->
+    StreamHandler ->
+    Maybe (LLMParams llm) ->
+    m (Either String ())
+  streamM llm chatHistory sHandler mbParams = liftIO $ stream llm chatHistory sHandler mbParams

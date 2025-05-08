@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 {- |
 Module      : Langchain.DocumentLoader.Core
 Description : Core document loading functionality for LangChain Haskell
@@ -50,6 +51,7 @@ module Langchain.DocumentLoader.Core
   , BaseLoader (..)
   ) where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson
 import Data.Map (Map, empty)
 import Data.Text (Text)
@@ -110,12 +112,18 @@ instance BaseLoader FilePath where
     return $ Right (splitText defaultCharacterSplitterOps content)
 @
 -}
-class BaseLoader m where
+class BaseLoader loader where
   -- | Load all documents from the source.
-  load :: m -> IO (Either String [Document])
+  load :: loader -> IO (Either String [Document])
+
+  loadM :: MonadIO m => loader -> m (Either String [Document])
+  loadM loader = liftIO $ load loader
 
   -- | Load all the document and split them using recursiveCharacterSpliter
-  loadAndSplit :: m -> IO (Either String [Text])
+  loadAndSplit :: loader -> IO (Either String [Text])
+
+  loadAndSplitM :: MonadIO m => loader -> m (Either String [Text])
+  loadAndSplitM loader = liftIO $ loadAndSplit loader
 
 {- $examples
 Key test case demonstrations:

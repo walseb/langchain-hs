@@ -29,6 +29,8 @@ module Langchain.Runnable.Core
   ( Runnable (..)
   ) where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
+
 {- | The core 'Runnable' typeclass represents anything that can "run" with an input and produce an output.
 
 This typeclass is the foundation of the LangChain Expression Language (LCEL) in Haskell,
@@ -82,6 +84,9 @@ class Runnable r where
   --   @
   invoke :: r -> RunnableInput r -> IO (Either String (RunnableOutput r))
 
+  invokeM :: MonadIO m => r -> RunnableInput r -> m (Either String (RunnableOutput r))
+  invokeM runnable input = liftIO $ invoke runnable input
+
   -- | Batch process multiple inputs at once.
   --
   --   This method can be overridden to provide more efficient batch processing,
@@ -101,6 +106,9 @@ class Runnable r where
   --     Right docs -> mapM_ print docs
   --   @
   batch :: r -> [RunnableInput r] -> IO (Either String [RunnableOutput r])
+
+  batchM :: MonadIO m => r -> [RunnableInput r] -> m (Either String [RunnableOutput r])
+  batchM runnable inputs = liftIO $ batch runnable inputs
 
   -- | Default implementation of batch that processes each input sequentially
   batch r inputs = do
@@ -135,3 +143,6 @@ class Runnable r where
       Right output -> do
         callback output
         return $ Right ()
+
+  streamM :: MonadIO m => r -> RunnableInput r -> (RunnableOutput r -> IO ()) -> m (Either String ())
+  streamM runnable input callback = liftIO $ stream runnable input callback

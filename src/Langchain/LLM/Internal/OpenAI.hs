@@ -131,12 +131,12 @@ import Data.Text.Encoding (encodeUtf8)
 import GHC.Generics
 import Network.HTTP.Conduit
 import Network.HTTP.Simple
-  ( getResponseStatus
+  ( getResponseBody
+  , getResponseStatus
   , setRequestBodyJSON
   , setRequestHeader
   , setRequestMethod
   , setRequestSecure
-  , getResponseBody
   )
 import Network.HTTP.Types.Status (statusCode)
 
@@ -193,7 +193,8 @@ data OpenAIStreamHandler = OpenAIStreamHandler
 Contains all parameters for configuring the OpenAI chat completion API call.
 -}
 data ChatCompletionRequest = ChatCompletionRequest
-  { messages :: [Message]
+  { baseUrl :: Maybe String
+  , messages :: [Message]
   -- ^ List of messages in the conversation history
   , model :: Text
   -- ^ The model to use for completion (e.g., "gpt-3.5-turbo")
@@ -968,7 +969,8 @@ instance FromJSON PromptTokensDetails where
 defaultChatCompletionRequest :: ChatCompletionRequest
 defaultChatCompletionRequest =
   ChatCompletionRequest
-    { messages = []
+    { baseUrl = Just "https://api.openai.com/v1"
+    , messages = []
     , model = "gpt-4.1-nano"
     , timeout = Just 60
     , frequencyPenalty = Nothing
@@ -1005,7 +1007,10 @@ Sends the request to OpenAI's API and parses the response.
 -}
 createChatCompletion :: Text -> ChatCompletionRequest -> IO (Either String ChatCompletionResponse)
 createChatCompletion apiKey r = do
-  request_ <- parseRequest "https://api.openai.com/v1/chat/completions"
+  request_ <-
+    parseRequest $
+      fromMaybe "https://api.openai.com/v1" (baseUrl r)
+        <> "/chat/completions"
   manager <-
     newManager
       tlsManagerSettings
@@ -1034,7 +1039,11 @@ Processes the stream using the provided handler.
 createChatCompletionStream ::
   Text -> ChatCompletionRequest -> OpenAIStreamHandler -> IO (Either String ())
 createChatCompletionStream apiKey r OpenAIStreamHandler {..} = do
-  request_ <- parseRequest "POST https://api.openai.com/v1/chat/completions"
+  request_ <-
+    parseRequest $
+      "POST "
+        <> fromMaybe "https://api.openai.com/v1" (baseUrl r)
+        <> "/chat/completions"
   let httpReq =
         setRequestHeader "Authorization" ["Bearer " <> encodeUtf8 apiKey] $
           setRequestHeader "Content-Type" ["application/json"] $

@@ -87,24 +87,6 @@ class Runnable r where
   invokeM :: MonadIO m => r -> RunnableInput r -> m (Either String (RunnableOutput r))
   invokeM runnable input = liftIO $ invoke runnable input
 
-  -- | Batch process multiple inputs at once.
-  --
-  --   This method can be overridden to provide more efficient batch processing,
-  --   particularly for components like LLMs that may have batch APIs.
-  --
-  --   The default implementation simply maps 'invoke' over each input and
-  --   sequences the results.
-  --
-  --   Example usage:
-  --
-  --   @
-  --   let retriever = VectorDBRetriever { ... }
-  --   questions <- ["What is Haskell?", "Explain monads.", "How do I install GHC?"]
-  --   result <- batch retriever questions
-  --   case result of
-  --     Left err -> putStrLn $ "Batch processing failed: " ++ err
-  --     Right docs -> mapM_ print docs
-  --   @
   batch :: r -> [RunnableInput r] -> IO (Either String [RunnableOutput r])
 
   batchM :: MonadIO m => r -> [RunnableInput r] -> m (Either String [RunnableOutput r])
@@ -115,24 +97,6 @@ class Runnable r where
     results <- mapM (invoke r) inputs
     return $ sequence results
 
-  -- | Stream results for components that support streaming.
-  --
-  --   This method is particularly useful for LLMs that can stream tokens as they're
-  --   generated, allowing for more responsive user interfaces.
-  --
-  --   The callback function is called with each piece of the output as it becomes available.
-  --
-  --   Example usage:
-  --
-  --   @
-  --   let model = OpenAI { temperature = 0.7, model = "gpt-3.5-turbo", streaming = True }
-  --   result <- stream model "Write a story about a programmer." $ \chunk -> do
-  --     putStr chunk
-  --     hFlush stdout
-  --   case result of
-  --     Left err -> putStrLn $ "\\nError: " ++ err
-  --     Right _ -> putStrLn "\\nStreaming completed successfully."
-  --   @
   stream :: r -> RunnableInput r -> (RunnableOutput r -> IO ()) -> IO (Either String ())
 
   -- | Default implementation that invokes the runnable and then calls the callback with the full result

@@ -142,6 +142,8 @@ instance FromJSON OpenAIEmbeddingsResponse where
 data OpenAIEmbeddings = OpenAIEmbeddings
   { apiKey :: Text
   -- ^ OpenAI API Key
+  , baseUrl :: Maybe String
+  -- ^ base url; default "https://api.openai.com/v1"
   , model :: Text
   -- ^ Model name for embeddings
   , dimensions :: Maybe Int
@@ -162,7 +164,9 @@ instance Show OpenAIEmbeddings where
 
 openAIEmbeddingsRequest :: OpenAIEmbeddings -> [Text] -> IO (Either String OpenAIEmbeddingsResponse)
 openAIEmbeddingsRequest OpenAIEmbeddings {..} txts = do
-  request_ <- parseRequest "https://api.openai.com/v1/embeddings"
+  request_ <-
+    parseRequest $
+      fromMaybe "https://api.openai.com/v1" baseUrl <> "/embeddings"
   manager <-
     newManager
       tlsManagerSettings
@@ -229,6 +233,7 @@ defaultOpenAIEmbeddings :: OpenAIEmbeddings
 defaultOpenAIEmbeddings =
   OpenAIEmbeddings
     { apiKey = ""
+    , baseUrl = pure "https://api.openai.com/v1"
     , model = textEmbedding3Small
     , dimensions = Nothing
     , encodingFormat = Nothing

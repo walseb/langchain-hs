@@ -106,28 +106,6 @@ data Cached r
   -- ^ Thread-safe cache storage
   }
 
-{- | Create a new cached 'Runnable'.
-
-This function initializes an empty cache and wraps the provided 'Runnable'
-in a 'Cached' wrapper.
-
-Example:
-
-@
-main = do
-  -- Create a cached LLM to avoid redundant API calls
-  let expensiveModel = OpenAI { model = "gpt-4", temperature = 0.7 }
-  cachedModel <- cached expensiveModel
-
-  -- These will all use the same cached result for identical inputs
-  result1 <- invoke cachedModel "What is functional programming?"
-  result2 <- invoke cachedModel "What is functional programming?"
-  result3 <- invoke cachedModel "What is functional programming?"
-
-  -- This will compute a new result
-  result4 <- invoke cachedModel "What is Haskell?"
-@
--}
 cached :: (Runnable r, Ord (RunnableInput r)) => r -> IO (Cached r)
 cached r = do
   cache <- newMVar Map.empty

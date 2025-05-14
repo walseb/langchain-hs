@@ -30,6 +30,7 @@ main = do
         { apiKey = "your-api-key"
         , openAIModelName = "gpt-3.5-turbo"
         , callbacks = []
+        , baseUrl = Nothing
         }
   result <- LLM.generate openAI "Tell me a joke" Nothing
   case result of
@@ -67,6 +68,8 @@ data OpenAI = OpenAI
   -- ^ The name of the OpenAI model to use (e.g., "gpt-3.5-turbo", "gpt-4").
   , callbacks :: [Callback]
   -- ^ A list of callbacks for handling events during LLM operations.
+  , baseUrl :: Maybe String
+  -- ^ Base url; default "https://api.openai.com/v1"
   }
 
 -- | Not including API key to avoid accidental leak
@@ -87,6 +90,7 @@ instance LLM.LLM OpenAI where
         apiKey
         ( OpenAI.defaultChatCompletionRequest
             { OpenAI.model = openAIModelName
+            , OpenAI.baseUrl = baseUrl
             , OpenAI.messages =
                 [OpenAI.defaultMessage {OpenAI.content = Just (OpenAI.StringContent prompt)}]
             , OpenAI.timeout = maybe Nothing timeout mbOpenAIParams
@@ -139,6 +143,7 @@ instance LLM.LLM OpenAI where
         apiKey
         ( OpenAI.defaultChatCompletionRequest
             { OpenAI.model = openAIModelName
+            , OpenAI.baseUrl = baseUrl
             , OpenAI.messages = toOpenAIMessages msgs
             , OpenAI.timeout = maybe Nothing timeout mbOpenAIParams
             , OpenAI.frequencyPenalty = maybe Nothing frequencyPenalty mbOpenAIParams
@@ -189,6 +194,7 @@ instance LLM.LLM OpenAI where
     let req =
           OpenAI.defaultChatCompletionRequest
             { OpenAI.model = openAIModelName
+            , OpenAI.baseUrl = baseUrl
             , OpenAI.messages = toOpenAIMessages msgs
             , OpenAI.stream = Just True -- Enable streaming'
             , OpenAI.timeout = maybe Nothing timeout mbOpenAIParams

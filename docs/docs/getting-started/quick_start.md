@@ -202,6 +202,7 @@ main = do
         { apiKey = "your-api-key"
         , openAIModelName = "gpt-4.1-nano"
         , callbacks = []
+        , baseUrl = Nothing
         }
   let chatHistory = fromList
         [ Message System "You are an AI assistant." defaultMessageData
@@ -356,6 +357,7 @@ runApp = do
                 { apiKey = "your-api-key"
                 , openAIModelName = "gpt-4.1-nano"
                 , callbacks = []
+                , baseUrl = Nothing
                 }
     let chatHistory =
             fromList

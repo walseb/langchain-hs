@@ -20,6 +20,7 @@ At this moment, following integrations available,
  - Ollama
  - OpenAI
  - HuggingFace
+ - Deepseek
  - More to come...
 
 ## A closer look at LLM Typeclass

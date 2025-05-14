@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.37.0.
+-- This file has been generated from package.yaml by hpack version 0.38.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -46,6 +46,7 @@ library
       Langchain.Embeddings.Ollama
       Langchain.Embeddings.OpenAI
       Langchain.LLM.Core
+      Langchain.LLM.Deepseek
       Langchain.LLM.Huggingface
       Langchain.LLM.Internal.Huggingface
       Langchain.LLM.Internal.OpenAI

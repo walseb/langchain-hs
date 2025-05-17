@@ -15,6 +15,7 @@ At this moment, following integrations available,
 - WikipediaTool
 - WebScraperTool
 - CalculatorTool
+- DuckDuckGo
 
 ## Example 
 
@@ -168,3 +169,10 @@ runApp = do
 ```
 
 Calculator tool can perform Add, Sub, Mul, Div, Pow operation and return type would be Either String Double.
+
+:::Warning
+
+Write now, duckduckgo tool only returns result if the search term has an abstract card. 
+It does not return links, only abstract summary
+
+:::

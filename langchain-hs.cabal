@@ -65,6 +65,7 @@ library
       Langchain.TextSplitter.Character
       Langchain.Tool.Calculator
       Langchain.Tool.Core
+      Langchain.Tool.DuckDuckGo
       Langchain.Tool.Utils
       Langchain.Tool.WebScraper
       Langchain.Tool.WikipediaTool

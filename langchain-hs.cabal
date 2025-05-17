@@ -52,6 +52,7 @@ library
       Langchain.LLM.Internal.OpenAI
       Langchain.LLM.Ollama
       Langchain.LLM.OpenAI
+      Langchain.LLM.OpenAICompatible
       Langchain.Memory.Core
       Langchain.Memory.TokenBufferMemory
       Langchain.OutputParser.Core

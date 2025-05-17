@@ -21,6 +21,7 @@ At this moment, following integrations available,
  - OpenAI
  - HuggingFace
  - Deepseek
+ - OpenAI compatible
  - More to come...
 
 ## A closer look at LLM Typeclass
@@ -112,3 +113,116 @@ The `LLM` typeclass is implemented for the `Deepseek` type, allowing it to be us
 ```note
 LLM typeclass takes ChatMessage as input for chat and stream functions. Where Message takes Role, Text and MessageData as input. The LLM client may take different Role or MessageData as input. For example, Ollama does not take Developer or Function role. Hence, it is recommended to convert the Message/Role to the LLM client specific type before calling the LLM client.
 ```
+
+## OpenAI Compatible Services
+
+For services that implement the **OpenAI API specification**, langchain-hs provides a flexible integration mechanism through the `OpenAICompatible` type. 
+This enables seamless interaction with local or custom servers like **LMStudio**, **Llama.cpp**, or any OpenAI-compatible endpoint.
+
+---
+
+### Key Features
+
+- **Universal Adapter**: Reuse OpenAI client logic for any compatible API
+- **Custom Endpoints**: Point to any OpenAI-compatible service
+- **Local Model Support**: Easily integrate with local inference servers
+- **Full LLM Typeclass Support**: Access to `generate`, `chat`, and `stream` operations
+
+---
+
+#### Creating Clients
+
+Use the helper functions to quickly set up common configurations:
+
+```haskell
+-- Create an LMStudio client
+let lmStudioClient = mkLMStudio 
+  "llama3-8b"              -- Model name
+  []                      -- Callbacks (empty list)
+  Nothing                 -- Custom base URL (uses default if omitted)
+  Nothing                 -- API key (optional for local servers)
+
+-- Create a Llama.cpp client
+let llamaCppClient = mkLlamaCpp 
+  "mistral-7b"             -- Model name
+  []                       -- Callbacks
+  (Just "http://api.example.com/v1")  -- Custom server URL
+  Nothing                 -- API key
+```
+
+#### Custom Configuration
+
+For full control, construct the type directly:
+
+```haskell
+let customClient = OpenAICompatible
+  { apiKey = Just "your-api-key"
+  , modelName = "custom-mistral"
+  , callbacks = [stdOutCallbacl]  -- Example with logging callback
+  , baseUrl = Just "https://my-ai-server.com/openai/v1"
+  , defaultBaseUrl = "http://localhost:8080/v1"
+  , providerName = "MyCustomProvider"
+  }
+```
+
+---
+
+
+#### Data Type Fields
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `apiKey` | Optional authentication token | `"sk-..."` |
+| `modelName` | Model identifier | `"llama3-8b"` |
+| `callbacks` | Event handlers | `[consoleCallback]` |
+| `baseUrl` | Custom API endpoint | `"http://localhost:1234/v1"` |
+| `defaultBaseUrl` | Fallback URL | `"http://localhost:8080/v1"` |
+| `providerName` | Service identifier | `"LMStudio"` |
+
+#### Helper Functions
+
+- `toOpenAI`: Converts `OpenAICompatible` to standard `OpenAI` type for internal processing
+- `mkLMStudio`: Specialized constructor for LMStudio servers
+- `mkLlamaCpp`: Specialized constructor for Llama.cpp servers
+
+---
+
+#### Implementation Details
+
+The `OpenAICompatible` type leverages the existing OpenAI implementation:
+
+```haskell
+instance LLM.OpenAICompatible where
+  type LLMParams OpenAICompatible = OpenAI.OpenAIParams
+  generate model = LLM.generate (toOpenAI model)
+  chat model = LLM.chat (toOpenAI model)
+  stream model = LLM.stream (toOpenAI model)
+
+-- Internal/OpenAI.hs
+request_ <-
+    parseRequest $
+      fromMaybe "https://api.openai.com/v1" (baseUrl r)
+        <> "/chat/completions"
+```
+
+This architecture allows:
+
+1. Reuse of OpenAI's request/response handling
+2. Consistent parameter management
+3. Unified streaming capabilities
+4. Seamless callback integration
+
+---
+
+#### Requirements
+
+When using OpenAI-compatible services:
+
+1. Ensure the server is running and accessible
+2. Verify the API endpoint matches OpenAI's specification
+3. Check model compatibility
+4. Configure CORS and authentication appropriately
+
+For local servers, common default ports include:
+- LMStudio: `1234`
+- Llama.cpp: `8080`

@@ -307,7 +307,7 @@ data ChatCompletionResponse = ChatCompletionResponse
   -- ^ Type of the response object
   , responseServiceTier :: Maybe Text
   -- ^ Service tier used
-  , systemFingerprint :: Text
+  , systemFingerprint :: Maybe Text
   -- ^ System fingerprint
   , usage :: Usage
   -- ^ Token usage information
@@ -323,7 +323,7 @@ instance FromJSON ChatCompletionResponse where
       <*> v .: "model"
       <*> v .: "object"
       <*> v .:? "service_tier"
-      <*> v .: "system_fingerprint"
+      <*> v .:? "system_fingerprint"
       <*> v .: "usage"
 
 {- | Represents a single message in a conversation.

@@ -82,7 +82,18 @@ instance Embeddings OllamaEmbeddings where
     -- For each input text, make an individual API call
     results <-
       mapM
-        (\doc -> embeddingOps model (pageContent doc) defaultTruncate defaultKeepAlive)
+        ( \doc -> do
+            eRes <-
+              embeddingOps
+                model
+                (pageContent doc)
+                defaultTruncate
+                defaultKeepAlive
+                Nothing
+            case eRes of
+              Left ollamaErr -> return $ Left $ show ollamaErr
+              Right r -> return $ Right r
+        )
         docs
     -- Combine the results, handling errors appropriately
     return $
@@ -97,9 +108,15 @@ instance Embeddings OllamaEmbeddings where
   --  Right [0.3, 0.4, ...]
   --
   embedQuery (OllamaEmbeddings {..}) query = do
-    res <- embeddingOps model query defaultTruncate defaultKeepAlive
+    res <-
+      embeddingOps
+        model
+        query
+        defaultTruncate
+        defaultKeepAlive
+        Nothing
     case fmap embedding_ res of
-      Left err -> pure $ Left err
+      Left err -> pure $ Left (show err)
       Right lst ->
         case listToMaybe lst of
           Nothing -> pure $ Left "Embeddings are empty"

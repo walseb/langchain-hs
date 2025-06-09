@@ -40,6 +40,7 @@ import Data.Ollama.Embeddings
 import Data.Text (Text)
 import Langchain.DocumentLoader.Core
 import Langchain.Embeddings.Core
+import qualified Data.Ollama.Embeddings as O
 
 {- | Ollama-specific embedding configuration
 Contains parameters for controlling:
@@ -58,19 +59,15 @@ data OllamaEmbeddings = OllamaEmbeddings
   -- ^ The name of the Ollama model to use for embeddings
   , defaultTruncate :: Maybe Bool
   -- ^ Optional flag to truncate input if supported by the API
-  , defaultKeepAlive :: Maybe Text
+  , defaultKeepAlive :: Maybe Int
   -- ^ Keep model loaded for specified duration (e.g., "5m")
+  , modelOptions :: Maybe O.ModelOptions
+  -- ^ Optional model parameters (e.g., temperature) as specified in the Modelfile.
   }
   deriving (Show, Eq)
 
-go :: EmbeddingResp -> Either String [Float]
-go embResp =
-  case listToMaybe (embedding_ embResp) of
-    Nothing -> Left "Embeddings are empty"
-    Just x -> Right x
-
 instance Embeddings OllamaEmbeddings where
-  -- \| Document embedding implementation [[3]]:
+  -- | Document embedding implementation:
   --  Processes each document individually through Ollama's API.
   --
   --  Example:
@@ -80,25 +77,17 @@ instance Embeddings OllamaEmbeddings where
   --
   embedDocuments (OllamaEmbeddings {..}) docs = do
     -- For each input text, make an individual API call
-    results <-
-      mapM
-        ( \doc -> do
-            eRes <-
-              embeddingOps
+    eRes <- embeddingOps
                 model
-                (pageContent doc)
+                (map pageContent docs)
                 defaultTruncate
                 defaultKeepAlive
+                modelOptions
                 Nothing
-            case eRes of
-              Left ollamaErr -> return $ Left $ show ollamaErr
-              Right r -> return $ Right r
-        )
-        docs
-    -- Combine the results, handling errors appropriately
-    return $
-      sequence results >>= \resps ->
-        mapM go resps
+    case eRes of
+        Left ollamaErr -> return $ Left $ show ollamaErr
+        Right r -> return $ Right $ respondedEmbeddings r
+        
 
   -- \| Query embedding implementation:
   --  Generates vector representation for search queries.
@@ -111,11 +100,12 @@ instance Embeddings OllamaEmbeddings where
     res <-
       embeddingOps
         model
-        query
+        [query]
         defaultTruncate
         defaultKeepAlive
+        modelOptions
         Nothing
-    case fmap embedding_ res of
+    case fmap respondedEmbeddings res of
       Left err -> pure $ Left (show err)
       Right lst ->
         case listToMaybe lst of

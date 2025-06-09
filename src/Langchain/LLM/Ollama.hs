@@ -22,7 +22,7 @@ Example usage:
 
 @
 -- Create Ollama configuration
-ollamaLLM = Ollama "llama3" [stdOutCallback]
+ollamaLLM = Ollama "gemma3" [stdOutCallback]
 
 -- Generate text
 response <- generate ollamaLLM "Explain Haskell monads" Nothing
@@ -38,14 +38,15 @@ streamHandler = StreamHandler print (putStrLn "Done")
 streamResult <- stream ollamaLLM messages streamHandler Nothing
 @
 -}
-module Langchain.LLM.Ollama (Ollama (..), OllamaParams (..), defaultOllamaParams) where
+module Langchain.LLM.Ollama (
+    Ollama (..)
+    , OllamaParams (..)
+    , defaultOllamaParams) where
 
-import Data.Aeson
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Maybe (fromMaybe)
 import qualified Data.Ollama.Chat as OllamaChat
-import qualified Data.Ollama.Common.Config as OllamaConfig
 import qualified Data.Ollama.Common.Types as O
 import qualified Data.Ollama.Generate as OllamaGenerate
 import Data.Text (Text)
@@ -74,7 +75,8 @@ data Ollama = Ollama
 instance Show Ollama where
   show (Ollama modelName _) = "Ollama " ++ show modelName
 
--- | Ollama Params contains same fields GenerateOps and ChatOps from [ollama-haskell](https://hackage.haskell.org/package/ollama-haskell)
+-- | Ollama Params contains same fields GenerateOps and ChatOps 
+-- from [ollama-haskell](https://hackage.haskell.org/package/ollama-haskell)
 data OllamaParams = OllamaParams
   { suffix :: Maybe Text
   -- ^ An optional suffix to append to the generated text.
@@ -85,26 +87,29 @@ data OllamaParams = OllamaParams
   , system :: Maybe Text
   -- ^ Optional system text that can be included in the generation context.
   , template :: Maybe Text
-  -- ^ An optional streaming function where the first function handles each chunk of response, and the second flushes the stream.
+  -- ^ An optional streaming function where the first function handles 
+  -- each chunk of response, and the second flushes the stream.
   -- ^ This will not work for chat and stream, use promptTemplate instead
   , raw :: Maybe Bool
   -- ^ An optional flag to return the raw response.
-  , keepAlive :: Maybe Text
+  , keepAlive :: Maybe Int
   -- ^ Optional text to specify keep-alive behavior.
   , hostUrl :: Maybe Text
   -- ^ Override default Ollama host url. Default url = "http://127.0.0.1:11434"
   , responseTimeOut :: Maybe Int
   -- ^ Override default response timeout in minutes. Default = 15 minutes
-  , options :: Maybe Value
-  -- ^ additional model parameters listed in the documentation for the Modelfile such as temperature
-  , tools :: Maybe [Value]
-  -- ^ Optional tools that may be used in the chat. Will only work for chat and stream and not Generate.
+  , options :: Maybe O.ModelOptions
+  -- ^ additional model parameters listed in the documentation for 
+  -- the Modelfile such as temperature
+  , tools :: !(Maybe [O.InputTool])
+  -- ^ Optional tools that may be used in the chat.
+  -- Will only work for chat and stream and not Generate.
+  , think :: !(Maybe Bool)
+  -- ^ Optional flag to enable thinking mode.
   }
   deriving (Eq, Show)
 
 {- | Ollama implementation of the LLM typeclass
-Note: Params argument is currently ignored (see TODOs).
-
 Example instance usage:
 
 @
@@ -117,7 +122,7 @@ case generate ollamaLLM "Hello" Nothing of
 instance LLM Ollama where
   type LLMParams Ollama = OllamaParams
 
-  -- \| Generate text from a prompt
+  -- | Generate text from a prompt
   --  Returns Left on API errors, Right on success.
   --
   --  Example:
@@ -140,28 +145,23 @@ instance LLM Ollama where
           , OllamaGenerate.raw = maybe Nothing raw mbOllamaParams
           , OllamaGenerate.keepAlive = maybe Nothing keepAlive mbOllamaParams
           , OllamaGenerate.options = maybe Nothing options mbOllamaParams
+          , OllamaGenerate.think = maybe Nothing think mbOllamaParams
           }
-        ( Just $
-            OllamaConfig.defaultOllamaConfig
-              { OllamaConfig.hostUrl =
-                  maybe
-                    "http://127.0.0.1:11434"
-                    (\x -> fromMaybe "http://127.0.0.1:11434" (hostUrl x))
-                    mbOllamaParams
-              , OllamaConfig.timeout =
-                  maybe
-                    15
-                    (\x -> fromMaybe 15 (responseTimeOut x))
-                    mbOllamaParams
-              }
-        )
+        (Just OllamaGenerate.defaultOllamaConfig {
+            OllamaGenerate.hostUrl = fromMaybe 
+                (OllamaGenerate.hostUrl OllamaGenerate.defaultOllamaConfig) 
+                    (mbOllamaParams >>= hostUrl)
+            , OllamaGenerate.timeout = fromMaybe 
+                (OllamaGenerate.timeout OllamaGenerate.defaultOllamaConfig) 
+                    (mbOllamaParams >>= responseTimeOut)
+        })
     case eRes of
       Left err -> do
         mapM_ (\cb -> cb (LLMError $ show err)) cbs
         return $ Left (show err)
       Right res -> do
         mapM_ (\cb -> cb LLMEnd) cbs
-        return $ Right (OllamaGenerate.response_ res)
+        return $ Right (OllamaGenerate.genResponse res)
 
   -- \| Chat interaction with message history.
   --  Uses Ollama's chat API for multi-turn conversations.
@@ -182,24 +182,17 @@ instance LLM Ollama where
           , OllamaChat.tools = maybe Nothing tools mbOllamaParams
           , OllamaChat.format = maybe Nothing format mbOllamaParams
           , OllamaChat.keepAlive = maybe Nothing keepAlive mbOllamaParams
-          , -- , OllamaChat.hostUrl = maybe Nothing hostUrl mbOllamaParams
-            -- , OllamaChat.responseTimeOut = maybe Nothing responseTimeOut mbOllamaParams
-            OllamaChat.options = maybe Nothing options mbOllamaParams
+          , OllamaChat.options = maybe Nothing options mbOllamaParams
+          , OllamaChat.think = maybe Nothing think mbOllamaParams
           }
-          ( Just $
-            OllamaConfig.defaultOllamaConfig
-              { OllamaConfig.hostUrl =
-                  maybe
-                    "http://127.0.0.1:11434"
-                    (\x -> fromMaybe "http://127.0.0.1:11434" (hostUrl x))
-                    mbOllamaParams
-              , OllamaConfig.timeout =
-                  maybe
-                    15
-                    (\x -> fromMaybe 15 (responseTimeOut x))
-                    mbOllamaParams
-              }
-        )
+          (Just OllamaChat.defaultOllamaConfig {
+            OllamaChat.hostUrl = fromMaybe 
+                (OllamaChat.hostUrl OllamaChat.defaultOllamaConfig) 
+                    (mbOllamaParams >>= hostUrl)
+            , OllamaChat.timeout = fromMaybe 
+                (OllamaChat.timeout OllamaChat.defaultOllamaConfig) 
+                    (mbOllamaParams >>= responseTimeOut)
+        })
     case eRes of
       Left err -> do
         mapM_ (\cb -> cb (LLMError $ show err)) cbs
@@ -218,35 +211,27 @@ instance LLM Ollama where
   --  >>> stream (Ollama "llama3" []) messages handler Nothing
   --  Token: H Token: i Complete
   --
-  stream (Ollama model_ cbs) messages StreamHandler {onToken, onComplete} mbOllamaParams = do
+  stream (Ollama model_ cbs) messages StreamHandler {onToken} mbOllamaParams = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
       OllamaChat.chat
         OllamaChat.defaultChatOps
           { OllamaChat.chatModelName = model_
           , OllamaChat.messages = toOllamaMessages messages
-          , OllamaChat.stream = Just (onToken . chatRespToText, onComplete)
+          , OllamaChat.stream = Just (onToken . chatRespToText)
           , OllamaChat.tools = maybe Nothing tools mbOllamaParams
           , OllamaChat.format = maybe Nothing format mbOllamaParams
           , OllamaChat.keepAlive = maybe Nothing keepAlive mbOllamaParams
-          , -- , OllamaChat.hostUrl = maybe Nothing hostUrl mbOllamaParams
-            -- , OllamaChat.responseTimeOut = maybe Nothing responseTimeOut mbOllamaParams
-            OllamaChat.options = maybe Nothing options mbOllamaParams
+          , OllamaChat.options = maybe Nothing options mbOllamaParams
           }
-          ( Just $
-            OllamaConfig.defaultOllamaConfig
-              { OllamaConfig.hostUrl =
-                  maybe
-                    "http://127.0.0.1:11434"
-                    (\x -> fromMaybe "http://127.0.0.1:11434" (hostUrl x))
-                    mbOllamaParams
-              , OllamaConfig.timeout =
-                  maybe
-                    15
-                    (\x -> fromMaybe 15 (responseTimeOut x))
-                    mbOllamaParams
-              }
-        )
+          (Just OllamaChat.defaultOllamaConfig {
+            OllamaChat.hostUrl = fromMaybe 
+                (OllamaChat.hostUrl OllamaChat.defaultOllamaConfig) 
+                    (mbOllamaParams >>= hostUrl)
+            , OllamaChat.timeout = fromMaybe 
+                (OllamaChat.timeout OllamaChat.defaultOllamaConfig) 
+                    (mbOllamaParams >>= responseTimeOut)
+        })
     case eRes of
       Left err -> do
         mapM_ (\cb -> cb (LLMError $ show err)) cbs
@@ -269,7 +254,12 @@ NonEmpty [OllamaChat.Message System "You are an assistant" Nothing Nothing]
 -}
 toOllamaMessages :: NonEmpty Message -> NonEmpty OllamaChat.Message
 toOllamaMessages = NonEmpty.map $ \Message {..} ->
-  OllamaChat.Message (toOllamaRole role) content Nothing Nothing
+  OllamaChat.Message 
+    (toOllamaRole role) 
+    content 
+    (messageImages messageData) 
+    (toolCalls messageData) 
+    (thinking messageData)
   where
     toOllamaRole User = OllamaChat.User
     toOllamaRole System = OllamaChat.System
@@ -298,20 +288,5 @@ defaultOllamaParams =
     , responseTimeOut = Nothing
     , options = Nothing
     , tools = Nothing
+    , think = Nothing
     }
-
-{- $examples
-Test case patterns:
-1. Basic generation
-   >>> generate (Ollama "test-model" []) "Hello" Nothing
-   Right "Mock response"
-
-2. Error handling
-   >>> generate (Ollama "invalid-model" []) "Test" Nothing
-   Left "API request failed"
-
-3. Streaming interaction
-   >>> let handler = StreamHandler print (pure ())
-   >>> stream (Ollama "llama3" []) (UserMessage "Hi" :| []) handler Nothing
-   Right ()
--}

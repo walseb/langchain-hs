@@ -15,11 +15,12 @@ tests =
     [ testGroup
         "embedQuery Tests"
         [ testCase "Propagates API errors" $ do
-            let embeddings = OllamaEmbeddings "error-model" Nothing Nothing
+            let embeddings = OllamaEmbeddings "error-model" Nothing Nothing Nothing
             -- Assuming embeddingOps returns Left "API Failure"
-            result <- embedQuery embeddings "error query"
+            result <- embedQuery embeddings "error query" 
             case result of
-              Left err -> assertBool "Error message contains 'error'" ("error" `isInfixOf` (pack err))
+              Left err -> 
+                assertBool "Error message contains 'error'" ("error" `isInfixOf` (pack err))
               Right _ -> assertFailure "Expected API error propagation"
         ]
     ]

@@ -45,6 +45,7 @@ module Langchain.LLM.Core
   ) where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import qualified Data.Ollama.Common.Types as O
 import Data.Aeson
 import Data.List.NonEmpty
 import Data.Text (Text)
@@ -121,8 +122,10 @@ breaking changes. Use 'defaultMessageData' for typical usage.
 data MessageData = MessageData
   { name :: Maybe Text
   -- ^ Optional name associated with the message
-  , toolCalls :: Maybe [Text]
+  , toolCalls :: Maybe [O.ToolCall]
   -- ^ Optional list of tool calls invoked by the message
+  , messageImages :: Maybe [Text]
+  , thinking :: Maybe Text
   }
   deriving (Eq, Show)
 
@@ -132,6 +135,8 @@ instance ToJSON MessageData where
     object
       [ "name" .= name
       , "tool_calls" .= toolCalls
+      , "images" .= messageImages
+      , "thinking" .= thinking
       -- Add more fields as they are added
       ]
 
@@ -141,6 +146,8 @@ instance FromJSON MessageData where
     MessageData
       <$> v .:? "name"
       <*> v .:? "tool_calls"
+      <*> v .:? "images"
+      <*> v .:? "thinking"
 
 -- | Type alias for NonEmpty Message
 type ChatMessage = NonEmpty Message
@@ -153,6 +160,8 @@ defaultMessageData =
   MessageData
     { name = Nothing
     , toolCalls = Nothing
+    , messageImages = Nothing
+    , thinking = Nothing
     }
 
 -- | Typeclass that all ChatModels should interface with

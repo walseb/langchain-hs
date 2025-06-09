@@ -1,6 +1,6 @@
-resolver: nightly-2025-05-05
+resolver: nightly-2025-05-28
 packages:
 - .
 extra-deps:
   - git: https://github.com/tusharad/ollama-haskell
-    commit: 8b4869a63643fd28d2b186f2d8e1175bc123b708
+    commit: c46f7e62e02f4750447346f6ae21e23b16b125ae

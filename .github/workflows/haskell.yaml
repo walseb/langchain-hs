@@ -19,12 +19,30 @@ jobs:
     outputs:
       stack-yamls: ${{ steps.generate.outputs.stack-yamls }}
 
-  tests:
+  build:
     needs: generate
     strategy:
       matrix:
         stack-yaml: ${{ fromJSON(needs.generate.outputs.stack-yamls) }}
       fail-fast: false
+
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Copy repo into actions 
+      uses: actions/checkout@v4
+
+    - name: install dependancies, build and test stack project.
+      uses: freckle/stack-action@v5
+      with:
+          stack-arguments: --stack-yaml ${{ matrix.stack-yaml }}
+          test: false
+  
+  tests:
+    needs: build
 
     runs-on: ubuntu-22.04
     defaults:
@@ -40,11 +58,13 @@ jobs:
       with:
         model: llama3.2:latest
 
+    - name: Warming up ollama models
+      run: |
+        ollama run llama3.2:latest "Hey, how are you?"
+
     - name: install dependancies, build and test stack project.
       uses: freckle/stack-action@v5
-      with:
-          stack-arguments: --stack-yaml ${{ matrix.stack-yaml }}
-  
+
   docs:
     runs-on: ubuntu-22.04
     defaults:

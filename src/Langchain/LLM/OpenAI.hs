@@ -39,10 +39,10 @@ main = do
 @
 -}
 module Langchain.LLM.OpenAI
-  ( 
-    -- * Types
+  ( -- * Types
     OpenAI (..)
   , OpenAIParams (..)
+
     -- * Default functions
   , defaultOpenAIParams
   ) where
@@ -178,17 +178,20 @@ instance LLM.LLM OpenAI where
       Right r -> do
         case listToMaybe ((\OpenAI.ChatCompletionResponse {..} -> choices) r) of
           Nothing -> return $ Left "Did not received any response"
-          Just resp ->
-            let OpenAI.Message {..} = OpenAI.message resp
-             in pure $
-                  Right $
-                    maybe
-                      ""
-                      ( \c -> case c of
-                          OpenAI.StringContent t -> t
-                          OpenAI.ContentParts _ -> ""
-                      )
-                      content
+          Just resp -> return $ Right $ LLM.from $ OpenAI.message resp
+
+  {-
+  let OpenAI.Message {..} = OpenAI.message resp
+   in pure $
+        Right $
+          maybe
+            ""
+            ( \c -> case c of
+                OpenAI.StringContent t -> t
+                OpenAI.ContentParts _ -> ""
+            )
+            content
+            -}
 
   stream OpenAI {..} msgs LLM.StreamHandler {onComplete, onToken} mbOpenAIParams = do
     let req =
@@ -260,7 +263,7 @@ toOpenAIMessages msgs = map go (NE.toList msgs)
 
 instance Run.Runnable OpenAI where
   type RunnableInput OpenAI = (LLM.ChatMessage, Maybe OpenAIParams)
-  type RunnableOutput OpenAI = Text
+  type RunnableOutput OpenAI = LLM.Message
 
   invoke = uncurry . LLM.chat
 

@@ -63,6 +63,7 @@ tests =
             assertBool "LLM should tried to be started" (events `shouldContainAll` [LLMStart])
             length (filter isErrorEvent events) @?= 1
           Right _ -> assertFailure "Expected error, but got success"
+
     , testCase "chat returns text response for messages" $ do
         (callback, getEvents) <- captureEvents
         let ollama = Ollama testModelName [callback]
@@ -71,9 +72,11 @@ tests =
         case result of
           Left err -> assertFailure $ "Expected success, got error: " ++ err
           Right response -> do
-            assertBool "Response should mention Paris" ("paris" `T.isInfixOf` T.toLower response)
+            assertBool "Response should mention Paris" 
+                ("paris" `T.isInfixOf` T.toLower (content response))
             events <- getEvents
             assertBool "LLM should be completed" (events `shouldContainAll` [LLMStart, LLMEnd])
+
     , testCase "chat handles multi-turn conversations" $ do
         (callback, _) <- captureEvents
         let ollama = Ollama testModelName [callback]
@@ -87,7 +90,8 @@ tests =
         case result of
           Left err -> assertFailure $ "Expected success, got error: " ++ err
           Right response -> 
-            assertBool "Response should mention Rome" ("rome" `T.isInfixOf` T.toLower response)
+            assertBool "Response should mention Rome" 
+                ("rome" `T.isInfixOf` T.toLower (content response))
 
     , testCase "stream calls handlers for streaming responses" $ do
         let ollama = Ollama testModelName []
@@ -114,7 +118,9 @@ tests =
         result <- Run.invoke ollama (input, Nothing)
         case result of
           Left err -> assertFailure $ "Expected success, got error: " ++ err
-          Right response -> assertBool "Should mention 4" ("4" `T.isInfixOf` T.toLower response)
+          Right response -> assertBool "Should mention 4" 
+            ("4" `T.isInfixOf` T.toLower (content response))
+
     {- llama3.2 does not support insert
     , testCase "generate appends suffix when provided" $ do
         (callback, getEvents) <- captureEvents
@@ -129,6 +135,7 @@ tests =
             events <- getEvents
             assertBool "should contain all events" (events `shouldContainAll` [LLMStart, LLMEnd])
             -}
+
     , testCase "generate uses system message for context" $ do
         (callback, getEvents) <- captureEvents
         let ollama = Ollama testModelName [callback]
@@ -172,6 +179,7 @@ tests =
             events <- getEvents
             assertBool "should contain all events" (events `shouldContainAll` [LLMStart, LLMEnd])
             -}
+
     , testCase "chat returns JSON response when format is set" $ do
         (callback, getEvents) <- captureEvents
         let ollama = Ollama testModelName [callback]
@@ -181,7 +189,7 @@ tests =
         case result of
           Left err -> assertFailure $ "Expected success, got error: " ++ err
           Right response -> do
-            case eitherDecode (BSL.fromStrict $ T.encodeUtf8 response) :: Either String Value of
+            case eitherDecode (BSL.fromStrict $ T.encodeUtf8 (content response)) :: Either String Value of
               Left _ -> assertFailure "Response is not valid JSON"
               Right _ -> return ()
             events <- getEvents

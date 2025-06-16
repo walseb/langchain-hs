@@ -154,7 +154,7 @@ instance (LLM llm) => Agent (ReactAgent llm) where
         case eResponse of
           Left err -> pure $ Left err
           Right response -> do
-            case parse response of
+            case parse $ content response of
               Left err -> pure (Left $ "Failed to parse response " <> err <> show response)
               Right (ReactAgentOutputParser step) -> return $ Right step
 

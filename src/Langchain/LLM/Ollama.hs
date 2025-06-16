@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 {- |
 Module      : Langchain.LLM.Ollama
@@ -38,10 +39,11 @@ streamHandler = StreamHandler print (putStrLn "Done")
 streamResult <- stream ollamaLLM messages streamHandler Nothing
 @
 -}
-module Langchain.LLM.Ollama (
-    Ollama (..)
-    , OllamaParams (..)
-    , defaultOllamaParams) where
+module Langchain.LLM.Ollama
+  ( Ollama (..)
+  , OllamaParams (..)
+  , defaultOllamaParams
+  ) where
 
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
@@ -75,8 +77,9 @@ data Ollama = Ollama
 instance Show Ollama where
   show (Ollama modelName _) = "Ollama " ++ show modelName
 
--- | Ollama Params contains same fields GenerateOps and ChatOps 
--- from [ollama-haskell](https://hackage.haskell.org/package/ollama-haskell)
+{- | Ollama Params contains same fields GenerateOps and ChatOps
+from [ollama-haskell](https://hackage.haskell.org/package/ollama-haskell)
+-}
 data OllamaParams = OllamaParams
   { suffix :: Maybe Text
   -- ^ An optional suffix to append to the generated text.
@@ -87,7 +90,7 @@ data OllamaParams = OllamaParams
   , system :: Maybe Text
   -- ^ Optional system text that can be included in the generation context.
   , template :: Maybe Text
-  -- ^ An optional streaming function where the first function handles 
+  -- ^ An optional streaming function where the first function handles
   -- each chunk of response, and the second flushes the stream.
   -- ^ This will not work for chat and stream, use promptTemplate instead
   , raw :: Maybe Bool
@@ -99,7 +102,7 @@ data OllamaParams = OllamaParams
   , responseTimeOut :: Maybe Int
   -- ^ Override default response timeout in minutes. Default = 15 minutes
   , options :: Maybe O.ModelOptions
-  -- ^ additional model parameters listed in the documentation for 
+  -- ^ additional model parameters listed in the documentation for
   -- the Modelfile such as temperature
   , tools :: !(Maybe [O.InputTool])
   -- ^ Optional tools that may be used in the chat.
@@ -122,13 +125,12 @@ case generate ollamaLLM "Hello" Nothing of
 instance LLM Ollama where
   type LLMParams Ollama = OllamaParams
 
-  -- | Generate text from a prompt
+  -- \| Generate text from a prompt
   --  Returns Left on API errors, Right on success.
   --
   --  Example:
   --  >>> generate (Ollama "llama3.2" []) "Hello" Nothing
   --  Right "Hello! How can I assist you today?"
-  --
   generate (Ollama model cbs) prompt mbOllamaParams = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
@@ -147,14 +149,18 @@ instance LLM Ollama where
           , OllamaGenerate.options = maybe Nothing options mbOllamaParams
           , OllamaGenerate.think = maybe Nothing think mbOllamaParams
           }
-        (Just OllamaGenerate.defaultOllamaConfig {
-            OllamaGenerate.hostUrl = fromMaybe 
-                (OllamaGenerate.hostUrl OllamaGenerate.defaultOllamaConfig) 
+        ( Just
+            OllamaGenerate.defaultOllamaConfig
+              { OllamaGenerate.hostUrl =
+                  fromMaybe
+                    (OllamaGenerate.hostUrl OllamaGenerate.defaultOllamaConfig)
                     (mbOllamaParams >>= hostUrl)
-            , OllamaGenerate.timeout = fromMaybe 
-                (OllamaGenerate.timeout OllamaGenerate.defaultOllamaConfig) 
+              , OllamaGenerate.timeout =
+                  fromMaybe
+                    (OllamaGenerate.timeout OllamaGenerate.defaultOllamaConfig)
                     (mbOllamaParams >>= responseTimeOut)
-        })
+              }
+        )
     case eRes of
       Left err -> do
         mapM_ (\cb -> cb (LLMError $ show err)) cbs
@@ -185,23 +191,27 @@ instance LLM Ollama where
           , OllamaChat.options = maybe Nothing options mbOllamaParams
           , OllamaChat.think = maybe Nothing think mbOllamaParams
           }
-          (Just OllamaChat.defaultOllamaConfig {
-            OllamaChat.hostUrl = fromMaybe 
-                (OllamaChat.hostUrl OllamaChat.defaultOllamaConfig) 
+        ( Just
+            OllamaChat.defaultOllamaConfig
+              { OllamaChat.hostUrl =
+                  fromMaybe
+                    (OllamaChat.hostUrl OllamaChat.defaultOllamaConfig)
                     (mbOllamaParams >>= hostUrl)
-            , OllamaChat.timeout = fromMaybe 
-                (OllamaChat.timeout OllamaChat.defaultOllamaConfig) 
+              , OllamaChat.timeout =
+                  fromMaybe
+                    (OllamaChat.timeout OllamaChat.defaultOllamaConfig)
                     (mbOllamaParams >>= responseTimeOut)
-        })
+              }
+        )
     case eRes of
       Left err -> do
         mapM_ (\cb -> cb (LLMError $ show err)) cbs
         return $ Left (show err)
       Right res -> do
         mapM_ (\cb -> cb LLMEnd) cbs
-        return $ Right (chatRespToText res)
-    where
-      chatRespToText resp = maybe "" OllamaChat.content (OllamaChat.message resp)
+        case OllamaChat.message res of
+          Nothing -> return $ Left $ "Message field not found: " <> show res
+          Just ollamaMsg -> return $ Right (from ollamaMsg)
 
   -- \| Streaming response handling.
   --  Processes tokens in real-time via StreamHandler.
@@ -218,20 +228,24 @@ instance LLM Ollama where
         OllamaChat.defaultChatOps
           { OllamaChat.chatModelName = model_
           , OllamaChat.messages = toOllamaMessages messages
-          , OllamaChat.stream = Just (onToken . chatRespToText)
+          , OllamaChat.stream = Just $ onToken . maybe "" O.content . O.message
           , OllamaChat.tools = maybe Nothing tools mbOllamaParams
           , OllamaChat.format = maybe Nothing format mbOllamaParams
           , OllamaChat.keepAlive = maybe Nothing keepAlive mbOllamaParams
           , OllamaChat.options = maybe Nothing options mbOllamaParams
           }
-          (Just OllamaChat.defaultOllamaConfig {
-            OllamaChat.hostUrl = fromMaybe 
-                (OllamaChat.hostUrl OllamaChat.defaultOllamaConfig) 
+        ( Just
+            OllamaChat.defaultOllamaConfig
+              { OllamaChat.hostUrl =
+                  fromMaybe
+                    (OllamaChat.hostUrl OllamaChat.defaultOllamaConfig)
                     (mbOllamaParams >>= hostUrl)
-            , OllamaChat.timeout = fromMaybe 
-                (OllamaChat.timeout OllamaChat.defaultOllamaConfig) 
+              , OllamaChat.timeout =
+                  fromMaybe
+                    (OllamaChat.timeout OllamaChat.defaultOllamaConfig)
                     (mbOllamaParams >>= responseTimeOut)
-        })
+              }
+        )
     case eRes of
       Left err -> do
         mapM_ (\cb -> cb (LLMError $ show err)) cbs
@@ -239,8 +253,6 @@ instance LLM Ollama where
       Right _ -> do
         mapM_ (\cb -> cb LLMEnd) cbs
         return $ Right ()
-    where
-      chatRespToText OllamaChat.ChatResponse {..} = maybe "" OllamaChat.content message
 
 {- | Convert LangChain messages to Ollama format.
 Current limitations:
@@ -254,22 +266,51 @@ NonEmpty [OllamaChat.Message System "You are an assistant" Nothing Nothing]
 -}
 toOllamaMessages :: NonEmpty Message -> NonEmpty OllamaChat.Message
 toOllamaMessages = NonEmpty.map $ \Message {..} ->
-  OllamaChat.Message 
-    (toOllamaRole role) 
-    content 
-    (messageImages messageData) 
-    (toolCalls messageData) 
+  OllamaChat.Message
+    (toOllamaRole role)
+    content
+    (messageImages messageData)
+    (toolCalls messageData)
     (thinking messageData)
-  where
-    toOllamaRole User = OllamaChat.User
-    toOllamaRole System = OllamaChat.System
-    toOllamaRole Assistant = OllamaChat.Assistant
-    toOllamaRole Tool = OllamaChat.Tool
-    toOllamaRole _ = OllamaChat.User -- Ollama only supports above 4 Roles, others will be defaulted to user
+
+toOllamaRole :: Role -> OllamaChat.Role
+toOllamaRole User = OllamaChat.User
+toOllamaRole System = OllamaChat.System
+toOllamaRole Assistant = OllamaChat.Assistant
+toOllamaRole Tool = OllamaChat.Tool
+toOllamaRole _ = OllamaChat.User -- Ollama only supports above 4 Roles, others will be defaulted to user
+
+fromOllamaRole :: OllamaChat.Role -> Role
+fromOllamaRole OllamaChat.User = User
+fromOllamaRole OllamaChat.System = System
+fromOllamaRole OllamaChat.Assistant = Assistant
+fromOllamaRole OllamaChat.Tool = Tool
+
+instance MessageConvertible OllamaChat.Message where
+  to Message {..} =
+    OllamaChat.Message
+      (toOllamaRole role)
+      content
+      (messageImages messageData)
+      (toolCalls messageData)
+      (thinking messageData)
+
+  from (OllamaChat.Message role' content' imgs tools think) =
+    Message
+      { role = fromOllamaRole role'
+      , content = content'
+      , messageData =
+          MessageData
+            { messageImages = imgs
+            , toolCalls = tools
+            , thinking = think
+            , name = Nothing
+            }
+      }
 
 instance Run.Runnable Ollama where
   type RunnableInput Ollama = (ChatMessage, Maybe OllamaParams)
-  type RunnableOutput Ollama = Text
+  type RunnableOutput Ollama = Message
 
   invoke = uncurry . chat
 

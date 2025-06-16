@@ -164,7 +164,8 @@ instance LLM Huggingface where
       Right r -> do
         case listToMaybe ((\Huggingface.ChatCompletionResponse {..} -> choices) r) of
           Nothing -> return $ Left "Did not received any response"
-          Just resp ->
+          Just resp -> return $ Right $ from (Huggingface.message resp)
+            {-
             let Huggingface.Message {..} = Huggingface.message resp
              in pure $
                   Right $
@@ -173,6 +174,7 @@ instance LLM Huggingface where
                         _ -> ""
                     )
                       content
+                      -}
 
   stream Huggingface {..} msgs LLM.StreamHandler {..} mbHuggingfaceParams = do
     Huggingface.createChatCompletionStream
@@ -229,3 +231,5 @@ toHuggingfaceMessages msgs = map go (NE.toList msgs)
         { Huggingface.role = toRole $ LLM.role msg
         , Huggingface.content = Huggingface.TextContent (LLM.content msg)
         }
+
+

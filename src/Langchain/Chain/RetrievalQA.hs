@@ -47,7 +47,7 @@ defaultQAPrompt =
 -- | Make RetrievalQA an instance of Runnable to allow composition.
 instance (LLM llm, Retriever retriever) => Runnable (RetrievalQA llm retriever) where
   type RunnableInput (RetrievalQA llm retriever) = Text
-  type RunnableOutput (RetrievalQA llm retriever) = Text
+  type RunnableOutput (RetrievalQA llm retriever) = Message
 
   invoke RetrievalQA {..} question = do
     -- Retrieve relevant documents

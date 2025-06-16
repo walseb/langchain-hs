@@ -59,6 +59,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (encodeUtf8)
 import GHC.Generics
+import qualified Langchain.LLM.Core as LLM
 import Network.HTTP.Conduit
 import Network.HTTP.Simple
   ( getResponseBody
@@ -285,7 +286,7 @@ instance FromJSON Message where
       <*> v .: "content"
       <*> v .:? "name"
 
-{- | $providers
+{- | \$providers
 Supported providers and their API endpoints:
 
 - Cerebras: @https://router.huggingface.co/cerebras/...
@@ -684,3 +685,36 @@ createChatCompletionStream apiKey r HuggingfaceStreamHandler {..} = do
                         writeIORef bufferRef BS.empty -- Clear buffer after successful parse
                       Nothing -> return () -- Keep in buffer for next chunk
             else return () -- Ignore non-data lines
+
+instance LLM.MessageConvertible Message where
+  -- to :: LLM.Message -> Message
+  to msg =
+    defaultMessage
+      { role = toRole $ LLM.role msg
+      , content = TextContent (LLM.content msg)
+      }
+    where
+      toRole :: LLM.Role -> Role
+      toRole r = case r of
+        LLM.System -> System
+        LLM.User -> User
+        LLM.Assistant -> Assistant
+        LLM.Tool -> Tool
+        _ -> User
+
+  -- from :: Message -> LLM.Message
+  from msg =
+    LLM.Message
+      { LLM.role = toRole (role msg)
+      , LLM.content = case (content msg) of
+          TextContent txt -> txt
+          _ -> ""
+      , LLM.messageData = LLM.defaultMessageData
+      }
+    where
+      toRole :: Role -> LLM.Role
+      toRole r = case r of
+        System -> LLM.System
+        User -> LLM.User
+        Assistant -> LLM.Assistant
+        Tool -> LLM.Tool

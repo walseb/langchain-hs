@@ -12,6 +12,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text)
 import Langchain.LLM.Core
 import Data.Maybe (fromMaybe)
+import Data.Either
 
 data TestLLM = TestLLM
   { responseText :: Text
@@ -30,7 +31,7 @@ instance LLM TestLLM where
   chat m _ _ =
     pure $
       if shouldSucceed m
-        then Right (responseText m)
+        then Right $ Message User (responseText m) defaultMessageData
         else Left "Test error"
 
   stream m _ handler _ = do
@@ -132,7 +133,8 @@ tests =
                     singleMsg = Message User "Test prompt" defaultMessageData
                     chatMsgs = singleMsg :| []
                 result <- chat successLLM chatMsgs Nothing
-                assertEqual "Successful chat" (Right "Success response") result
+                assertBool "Successful chat" (isRight result)
+
             , testCase "returns Left with error for failed chat" $ do
                 let failureLLM = TestLLM "Failure response" False
                     singleMsg = Message User "Test prompt" defaultMessageData

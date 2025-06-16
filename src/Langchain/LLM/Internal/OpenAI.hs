@@ -129,6 +129,7 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import GHC.Generics
+import qualified Langchain.LLM.Core as LLM
 import Network.HTTP.Conduit
 import Network.HTTP.Simple
   ( getResponseBody
@@ -1156,3 +1157,37 @@ defaultFunction =
     , parameters = Nothing
     , strict = Nothing
     }
+
+instance LLM.MessageConvertible Message where
+  to msg =
+    defaultMessage
+      { role = toRole $ LLM.role msg
+      , content = Just $ StringContent (LLM.content msg)
+      }
+    where
+      toRole :: LLM.Role -> Role
+      toRole r = case r of
+        LLM.System -> System
+        LLM.User -> User
+        LLM.Assistant -> Assistant
+        LLM.Tool -> Tool
+        LLM.Developer -> Developer
+        LLM.Function -> Function
+
+  from msg =
+    LLM.Message
+      { LLM.role = fromRole $ role msg
+      , LLM.content = case content msg of
+          Just (StringContent txt) -> txt
+          _ -> "" -- Handle other cases like `Nothing` or other content types as needed
+      , LLM.messageData = LLM.defaultMessageData -- TODO: implement ToolCalls for OpenAI
+      }
+    where
+      fromRole :: Role -> LLM.Role
+      fromRole r = case r of
+        System -> LLM.System
+        User -> LLM.User
+        Assistant -> LLM.Assistant
+        Tool -> LLM.Tool
+        Developer -> LLM.Developer
+        Function -> LLM.Function

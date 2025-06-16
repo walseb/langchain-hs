@@ -172,5 +172,5 @@ instance (BaseMemory m, LLM l) => Runnable (ConversationChain m l) where
               Left err -> return $ Left err
               Right response -> do
                 -- Store AI response in memory
-                _ <- addAiMessage updatedMem response
-                return $ Right response
+                _ <- addAiMessage updatedMem (content response)
+                return $ Right (content response)

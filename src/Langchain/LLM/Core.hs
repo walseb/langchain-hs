@@ -39,6 +39,7 @@ module Langchain.LLM.Core
   , ChatMessage
   , MessageData (..)
   , StreamHandler (..)
+  , MessageConvertible (..)
 
     -- * Default Values
   , defaultMessageData
@@ -190,11 +191,16 @@ class LLM llm where
     -- | Optional configuration parameters.
     Maybe (LLMParams llm) ->
     -- | The result of the chat, either an error or the response text.
-    IO (Either String Text)
+    IO (Either String Message)
 
   -- | Stream responses from the language model for a sequence of messages.
   -- Uses callbacks to process tokens in real-time; returns either an error or unit.
-  stream :: llm -> ChatMessage -> StreamHandler -> Maybe (LLMParams llm) -> IO (Either String ())
+  stream :: 
+       llm 
+    -> ChatMessage 
+    -> StreamHandler 
+    -> Maybe (LLMParams llm) 
+    -> IO (Either String ())
 
   -- Default implementations
 
@@ -220,7 +226,7 @@ class LLM llm where
     -- | Optional configuration parameters.
     Maybe (LLMParams llm) ->
     -- | The result of the chat, either an error or the response text.
-    m (Either String Text)
+    m (Either String Message)
   chatM llm chatHistory mbParams = liftIO $ chat llm chatHistory mbParams
 
   -- | MonadIO version of stream
@@ -232,3 +238,7 @@ class LLM llm where
     Maybe (LLMParams llm) ->
     m (Either String ())
   streamM llm chatHistory sHandler mbParams = liftIO $ stream llm chatHistory sHandler mbParams
+
+class MessageConvertible a where
+  to   :: Message -> a
+  from :: a -> Message

@@ -8,6 +8,7 @@ import Test.Tasty.HUnit
 
 import Langchain.DocumentLoader.Core (Document (..))
 import Langchain.LLM.Core (LLM (..))
+import qualified Langchain.LLM.Core as LLM
 import Langchain.Retriever.Core (Retriever (..))
 import Langchain.Retriever.MultiQueryRetriever
 
@@ -23,7 +24,7 @@ instance LLM DummyLLM where
   --
   -- "1. test query 1\n2. test query 2"
   generate _ _ _ = return $ Right "1. test query 1\n2. test query 2"
-  chat _ _ _ = return $ Right "dummy chat response"
+  chat _ _ _ = return $ Right $ LLM.Message LLM.User "dummy chat response" LLM.defaultMessageData
   stream _ _ _ _ = return $ Right ()
 
 data DummyRetriever = DummyRetriever

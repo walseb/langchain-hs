@@ -33,6 +33,7 @@ docsVec <- embedDocuments ollamaEmb [doc]
 -}
 module Langchain.Embeddings.Ollama
   ( OllamaEmbeddings (..)
+  , module Langchain.DocumentLoader.Core
   ) where
 
 import Data.Maybe

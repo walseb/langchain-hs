@@ -10,8 +10,8 @@ License     : MIT
 Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
 Stability   : experimental
 
-This module provides the 'OpenAICompatible' data type and 
-implements the 'LLM' typeclass for interacting with OpenAICompatible APIs. 
+This module provides the 'OpenAICompatible' data type and
+implements the 'LLM' typeclass for interacting with OpenAICompatible APIs.
 Also provides some convenience functions for `LMStudio` and LLama.cpp
 -}
 module Langchain.LLM.OpenAICompatible
@@ -20,12 +20,14 @@ module Langchain.LLM.OpenAICompatible
   , mkLMStudio
   , mkLlamaCpp
   , mkOpenRouter
+  , module Langchain.LLM.Core
   ) where
 
 import Data.Maybe
 import Data.Text (Text)
 import qualified Data.Text as T
 import Langchain.Callback
+import Langchain.LLM.Core
 import qualified Langchain.LLM.Core as LLM
 import qualified Langchain.LLM.OpenAI as OpenAI
 
@@ -88,13 +90,14 @@ mkLlamaCpp modelName' callbacks' baseUrl' apiKey' =
     , providerName = "LlamaCpp"
     }
 
--- | Create an OpenRouter instance
--- OpenRouter provides access to multiple model providers through a single API
--- Model name should be in the format "provider/model" (e.g., "anthropic/claude-3-opus")
+{- | Create an OpenRouter instance
+OpenRouter provides access to multiple model providers through a single API
+Model name should be in the format "provider/model" (e.g., "anthropic/claude-3-opus")
+-}
 mkOpenRouter :: Text -> [Callback] -> Maybe String -> Text -> OpenAICompatible
 mkOpenRouter modelName' callbacks' baseUrl' apiKey' =
   OpenAICompatible
-    { apiKey = Just apiKey'  -- OpenRouter requires an API key
+    { apiKey = Just apiKey' -- OpenRouter requires an API key
     , modelName = modelName'
     , callbacks = callbacks'
     , baseUrl = baseUrl'

@@ -26,6 +26,8 @@ module Langchain.LLM.Huggingface
     -- * Functions
   , defaultHuggingfaceParams
   , Huggingface.defaultMessage
+    -- * Re-export
+  , module LLM
   ) where
 
 import qualified Data.List.NonEmpty as NE

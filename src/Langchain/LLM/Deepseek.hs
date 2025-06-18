@@ -15,11 +15,15 @@ It supports generating text, handling chat interactions, and streaming responses
 
 This deepseek type uses OpenAI module with baseUrl as "https://api.deepseek.com";
 -}
-module Langchain.LLM.Deepseek (Deepseek (..)) where
+module Langchain.LLM.Deepseek
+  ( Deepseek (..)
+  , module Langchain.LLM.Core
+  ) where
 
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Langchain.Callback
+import Langchain.LLM.Core
 import qualified Langchain.LLM.Core as LLM
 import qualified Langchain.LLM.OpenAI as OpenAI
 

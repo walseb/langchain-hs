@@ -45,6 +45,9 @@ module Langchain.LLM.OpenAI
 
     -- * Default functions
   , defaultOpenAIParams
+
+    -- * Re-export
+  , module Langchain.LLM.Core
   ) where
 
 import qualified Data.List.NonEmpty as NE
@@ -52,6 +55,7 @@ import Data.Map (Map)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Text (Text)
 import Langchain.Callback (Callback)
+import Langchain.LLM.Core
 import qualified Langchain.LLM.Core as LLM
 import qualified Langchain.LLM.Internal.OpenAI as OpenAI
 import qualified Langchain.Runnable.Core as Run

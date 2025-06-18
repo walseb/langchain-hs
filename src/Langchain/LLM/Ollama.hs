@@ -43,6 +43,8 @@ module Langchain.LLM.Ollama
   ( Ollama (..)
   , OllamaParams (..)
   , defaultOllamaParams
+  -- * Re-export
+  , module Langchain.LLM.Core
   ) where
 
 import Data.List.NonEmpty (NonEmpty)

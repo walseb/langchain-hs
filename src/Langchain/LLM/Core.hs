@@ -126,7 +126,9 @@ data MessageData = MessageData
   , toolCalls :: Maybe [O.ToolCall]
   -- ^ Optional list of tool calls invoked by the message
   , messageImages :: Maybe [Text]
+  -- ^ Base64 encoded image data list
   , thinking :: Maybe Text
+  -- ^ Thinking 
   }
   deriving (Eq, Show)
 

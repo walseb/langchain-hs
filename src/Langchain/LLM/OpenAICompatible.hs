@@ -16,10 +16,12 @@ Also provides some convenience functions for `LMStudio` and LLama.cpp
 -}
 module Langchain.LLM.OpenAICompatible
   ( OpenAICompatible (..)
+  , OpenAI.OpenAIParams (..)
   , toOpenAI
   , mkLMStudio
   , mkLlamaCpp
   , mkOpenRouter
+  , OpenAI.defaultOpenAIParams
   , module Langchain.LLM.Core
   ) where
 

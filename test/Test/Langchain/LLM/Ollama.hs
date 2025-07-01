@@ -68,7 +68,7 @@ tests =
         (callback, getEvents) <- captureEvents
         let ollama = Ollama testModelName [callback]
         let messages = Message User "What's the capital of France?" defaultMessageData :| []
-        result <- chat ollama messages Nothing
+        result <- chat ollama messages (Just $ defaultOllamaParams { responseTimeOut = Just 1200 })
         case result of
           Left err -> assertFailure $ "Expected success, got error: " ++ err
           Right response -> do

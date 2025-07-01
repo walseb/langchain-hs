@@ -1,25 +1,30 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module App.Ollama.ToolCall (runApp) where
+module App.OpenRouter.ToolCall (runApp) where
 
 import Data.Aeson
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as HM
-import Data.Ollama.Chat
-  ( FunctionDef (..)
-  , FunctionParameters (..)
-  , InputTool (..)
-  )
 import Data.Scientific
-import Langchain.LLM.Ollama
+import qualified Data.Text as T
+import qualified Langchain.LLM.Internal.OpenAI as OpenAIInternal
+import Langchain.LLM.OpenAICompatible
+import System.Environment
+import Data.Maybe (fromMaybe)
 
 addTwoNumbers :: Int -> Int -> Int
 addTwoNumbers = (+)
 
 runApp :: IO ()
 runApp = do
-  let ollamaLLM = Ollama "qwen3:0.6b" []
+  apiKey <- T.pack . fromMaybe "api-key" <$> lookupEnv "OPENAI_API_KEY"
+  let openRouter =
+        mkOpenRouter
+          "deepseek/deepseek-chat-v3-0324:free"
+          []
+          Nothing
+          apiKey
   let messageList =
         NE.singleton
           ( Message
@@ -29,34 +34,36 @@ runApp = do
           )
       paramProp =
         HM.fromList
-          [ ("a", FunctionParameters "number" Nothing Nothing Nothing)
-          , ("b", FunctionParameters "number" Nothing Nothing Nothing)
+          [ ("a", 
+                OpenAIInternal.FunctionParameters "number" Nothing Nothing Nothing)
+          , ("b", 
+                OpenAIInternal.FunctionParameters "number" Nothing Nothing Nothing)
           ]
       functionParams =
-        FunctionParameters
+        OpenAIInternal.FunctionParameters
           { parameterType = "object"
           , requiredParams = Just ["a", "b"]
           , parameterProperties = Just paramProp
           , additionalProperties = Just False
           }
       functionDef =
-        FunctionDef
+        OpenAIInternal.FunctionDef
           { functionName = "addTwoNumbers"
           , functionDescription = Just "Add two numbers"
           , functionParameters = Just functionParams
           , functionStrict = Nothing
           }
       inputTool =
-        InputTool
+        OpenAIInternal.InputTool
           { toolType = "function"
           , function = functionDef
           }
-  let mbOllamaParams =
+  let mbOpenAIParams =
         Just $
-          defaultOllamaParams
+          defaultOpenAIParams
             { tools = Just [inputTool]
             }
-  eRes <- chat ollamaLLM messageList mbOllamaParams
+  eRes <- chat openRouter messageList mbOpenAIParams
   case eRes of
     Left err -> putStrLn $ "Error from chat: " ++ show err
     Right r -> do
@@ -70,7 +77,7 @@ convertToNumber (Number n) = toBoundedInteger n
 convertToNumber _ = Nothing
 
 executeFunction :: ToolCall -> IO ()
-executeFunction (ToolCall _ _ ToolFunction{..}) = do
+executeFunction (ToolCall _ _ ToolFunction {..}) = do
   if toolFunctionName == "addTwoNumbers"
     then do
       case HM.lookup "a" toolFunctionArguments >>= convertToNumber of

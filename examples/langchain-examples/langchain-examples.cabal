@@ -27,6 +27,7 @@ library
   exposed-modules:
       App.Ollama.ToolCall
       App.OpenRouter.PdfQA
+      App.OpenRouter.ToolCall
       Lib
   other-modules:
       Paths_langchain_examples

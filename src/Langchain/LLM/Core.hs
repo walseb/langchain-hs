@@ -38,6 +38,8 @@ module Langchain.LLM.Core
   , Role (..)
   , ChatMessage
   , MessageData (..)
+  , ToolCall (..)
+  , ToolFunction (..)
   , StreamHandler (..)
   , MessageConvertible (..)
 
@@ -46,11 +48,13 @@ module Langchain.LLM.Core
   ) where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import qualified Data.Ollama.Common.Types as O
+import qualified Data.Map as HM
+import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson
 import Data.List.NonEmpty
 import Data.Text (Text)
 import GHC.Generics
+import Data.Text.Encoding (encodeUtf8)
 
 {- | Callbacks for handling streaming responses from a language model.
 This allows real-time processing of tokens as they are generated and an action
@@ -116,6 +120,55 @@ data Message = Message
   }
   deriving (Eq, Show)
 
+-- Function call details
+data ToolFunction = ToolFunction
+  { toolFunctionName      :: Text
+  , toolFunctionArguments :: HM.Map Text Value
+  } deriving (Show, Eq)
+
+-- Main tool call structure
+data ToolCall = ToolCall
+  { toolCallId       :: Text
+  , toolCallType     :: Text
+  , toolCallFunction :: ToolFunction
+  } deriving (Show, Eq)
+
+-- ToJSON instance for ToolFunction
+instance ToJSON ToolFunction where
+  toJSON (ToolFunction name args) = object
+    [ "name"      .= name
+    , "arguments" .= args
+    ]
+
+-- FromJSON instance for ToolFunction
+instance FromJSON ToolFunction where
+  parseJSON = withObject "ToolFunction" $ \obj -> do
+    name <- obj .: "name"
+    argsVal <- obj .: "arguments"
+    args <- case argsVal of
+      Object o -> pure $ KM.toMapText o
+      String s -> case decodeStrict (encodeUtf8 s) of
+        Just (Object o) -> pure $ KM.toMapText o
+        _ -> fail "ToolFunction.arguments: expected object or JSON-encoded object string"
+      _ -> fail "ToolFunction.arguments: expected object or string"
+    return $ ToolFunction name args
+
+-- ToJSON instance for ToolCall
+instance ToJSON ToolCall where
+  toJSON (ToolCall callId callType func) = object
+    [ "id"       .= callId
+    , "type"     .= callType
+    , "function" .= func
+    ]
+
+-- FromJSON instance for ToolCall
+instance FromJSON ToolCall where
+  parseJSON = withObject "ToolCall" $ \obj -> do
+    callId   <- obj .: "id"
+    callType <- obj .: "type"
+    func     <- obj .: "function"
+    return $ ToolCall callId callType func
+
 {- | Additional data for a message, such as a name or tool calls.
 This type is designed for extensibility, allowing new fields to be added without
 breaking changes. Use 'defaultMessageData' for typical usage.
@@ -123,7 +176,7 @@ breaking changes. Use 'defaultMessageData' for typical usage.
 data MessageData = MessageData
   { name :: Maybe Text
   -- ^ Optional name associated with the message
-  , toolCalls :: Maybe [O.ToolCall]
+  , toolCalls :: Maybe [ToolCall]
   -- ^ Optional list of tool calls invoked by the message
   , messageImages :: Maybe [Text]
   -- ^ Base64 encoded image data list

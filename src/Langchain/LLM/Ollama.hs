@@ -43,11 +43,11 @@ module Langchain.LLM.Ollama
   ( Ollama (..)
   , OllamaParams (..)
   , defaultOllamaParams
-  -- * Re-export
+
+    -- * Re-export
   , module Langchain.LLM.Core
   ) where
 
-import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Maybe (fromMaybe)
 import qualified Data.Ollama.Chat as OllamaChat
@@ -92,9 +92,10 @@ data OllamaParams = OllamaParams
   , system :: Maybe Text
   -- ^ Optional system text that can be included in the generation context.
   , template :: Maybe Text
-  -- ^ An optional streaming function where the first function handles
-  -- each chunk of response, and the second flushes the stream.
-  -- ^ This will not work for chat and stream, use promptTemplate instead
+  {- ^ An optional streaming function where the first function handles
+  each chunk of response, and the second flushes the stream.
+  ^ This will not work for chat and stream, use promptTemplate instead
+  -}
   , raw :: Maybe Bool
   -- ^ An optional flag to return the raw response.
   , keepAlive :: Maybe Int
@@ -102,13 +103,15 @@ data OllamaParams = OllamaParams
   , hostUrl :: Maybe Text
   -- ^ Override default Ollama host url. Default url = "http://127.0.0.1:11434"
   , responseTimeOut :: Maybe Int
-  -- ^ Override default response timeout in minutes. Default = 15 minutes
+  -- ^ Override default response timeout in seconds. Default = 900 seconds
   , options :: Maybe O.ModelOptions
-  -- ^ additional model parameters listed in the documentation for
-  -- the Modelfile such as temperature
+  {- ^ additional model parameters listed in the documentation for
+  the Modelfile such as temperature
+  -}
   , tools :: !(Maybe [O.InputTool])
-  -- ^ Optional tools that may be used in the chat.
-  -- Will only work for chat and stream and not Generate.
+  {- ^ Optional tools that may be used in the chat.
+  Will only work for chat and stream and not Generate.
+  -}
   , think :: !(Maybe Bool)
   -- ^ Optional flag to enable thinking mode.
   }
@@ -185,7 +188,7 @@ instance LLM Ollama where
       OllamaChat.chat
         OllamaChat.defaultChatOps
           { OllamaChat.chatModelName = model
-          , OllamaChat.messages = toOllamaMessages messages
+          , OllamaChat.messages = NonEmpty.map to messages
           , OllamaChat.stream = Nothing
           , OllamaChat.tools = maybe Nothing tools mbOllamaParams
           , OllamaChat.format = maybe Nothing format mbOllamaParams
@@ -229,7 +232,7 @@ instance LLM Ollama where
       OllamaChat.chat
         OllamaChat.defaultChatOps
           { OllamaChat.chatModelName = model_
-          , OllamaChat.messages = toOllamaMessages messages
+          , OllamaChat.messages = NonEmpty.map to messages
           , OllamaChat.stream = Just $ onToken . maybe "" O.content . O.message
           , OllamaChat.tools = maybe Nothing tools mbOllamaParams
           , OllamaChat.format = maybe Nothing format mbOllamaParams
@@ -256,25 +259,6 @@ instance LLM Ollama where
         mapM_ (\cb -> cb LLMEnd) cbs
         return $ Right ()
 
-{- | Convert LangChain messages to Ollama format.
-Current limitations:
-- Ignores 'messageData' field
-- No tool call support (see TODO)
-
-Example conversion:
->>> let msg = Message System "You are an assistant" defaultMessageData
->>> toOllamaMessages (msg :| [])
-NonEmpty [OllamaChat.Message System "You are an assistant" Nothing Nothing]
--}
-toOllamaMessages :: NonEmpty Message -> NonEmpty OllamaChat.Message
-toOllamaMessages = NonEmpty.map $ \Message {..} ->
-  OllamaChat.Message
-    (toOllamaRole role)
-    content
-    (messageImages messageData)
-    (toolCalls messageData)
-    (thinking messageData)
-
 toOllamaRole :: Role -> OllamaChat.Role
 toOllamaRole User = OllamaChat.User
 toOllamaRole System = OllamaChat.System
@@ -294,8 +278,18 @@ instance MessageConvertible OllamaChat.Message where
       (toOllamaRole role)
       content
       (messageImages messageData)
-      (toolCalls messageData)
+      (fmap toOllamaToolCall <$> toolCalls messageData)
       (thinking messageData)
+    where
+      toOllamaToolCall :: ToolCall -> O.ToolCall
+      toOllamaToolCall ToolCall {..} =
+        O.ToolCall
+          { O.outputFunction =
+              O.OutputFunction
+                { O.outputFunctionName = toolFunctionName toolCallFunction
+                , O.arguments = toolFunctionArguments toolCallFunction
+                }
+          }
 
   from (OllamaChat.Message role' content' imgs tools think) =
     Message
@@ -304,11 +298,23 @@ instance MessageConvertible OllamaChat.Message where
       , messageData =
           MessageData
             { messageImages = imgs
-            , toolCalls = tools
+            , toolCalls = fmap toToolCall <$> tools
             , thinking = think
             , name = Nothing
             }
       }
+    where
+      toToolCall :: O.ToolCall -> ToolCall
+      toToolCall O.ToolCall {..} =
+        ToolCall
+          { toolCallId = ""
+          , toolCallType = "function"
+          , toolCallFunction =
+              ToolFunction
+                { toolFunctionName = O.outputFunctionName outputFunction
+                , toolFunctionArguments = O.arguments outputFunction
+                }
+          }
 
 instance Run.Runnable Ollama where
   type RunnableInput Ollama = (ChatMessage, Maybe OllamaParams)

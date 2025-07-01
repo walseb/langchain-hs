@@ -293,7 +293,7 @@ data OpenAIParams = OpenAIParams
   , store :: Maybe Bool
   , temperature :: Maybe Double
   , toolChoice :: Maybe OpenAI.ToolChoice
-  , tools :: Maybe [OpenAI.Tool_]
+  , tools :: Maybe [OpenAI.InputTool]
   , topLogprobs :: Maybe Int
   , topP :: Maybe Double
   , user :: Maybe Text

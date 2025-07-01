@@ -11,10 +11,12 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Langchain.DocumentLoader.PdfLoader
 import Langchain.Embeddings.Ollama
-import Langchain.LLM.OpenAICompatible
+import Langchain.LLM.OpenAICompatible hiding (metadata)
 import Langchain.PromptTemplate
 import Langchain.Retriever.Core
 import Langchain.VectorStore.InMemory
+import System.Environment
+import Data.Maybe (fromMaybe)
 
 -- Template for system prompt
 systemTemplate :: Text
@@ -41,13 +43,14 @@ stripSources msg =
 -- Main entry point
 runApp :: IO ()
 runApp = do
+  aKey <- T.pack . fromMaybe "api-key" <$> lookupEnv "OPENAI_API_KEY"
   -- Setup
   let openRouter =
         mkOpenRouter
           "meta-llama/llama-3.3-8b-instruct:free"
           []
           Nothing
-          "api-key"
+          aKey
 
   let sourcePdf = PdfLoader "./SOP.pdf"
   let ollamaEmbeddings =
@@ -60,8 +63,7 @@ runApp = do
   -- Prepare documents and vector store
   result <- runExceptT $ do
     docs <- ExceptT $ load sourcePdf
-    inMemVS <- ExceptT $ fromDocuments ollamaEmbeddings docs
-    return inMemVS
+    ExceptT $ fromDocuments ollamaEmbeddings docs
 
   case result of
     Left err -> putStrLn $ "Error loading documents: " <> err

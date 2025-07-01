@@ -76,10 +76,9 @@ module Langchain.LLM.Internal.OpenAI
   , Role (..)
   , MessageContent (..)
   , TextContent (..)
-  , Tool_ (..)
-  , Function_ (..)
-  , ToolCall (..)
-  , FunctionCall_ (..)
+  , InputTool (..)
+  , FunctionDef (..)
+  , FunctionParameters (..)
   , Usage (..)
   , Choice (..)
   , FinishReason (..)
@@ -130,6 +129,7 @@ import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import GHC.Generics
 import qualified Langchain.LLM.Core as LLM
+import qualified Data.Map as HM
 import Network.HTTP.Conduit
 import Network.HTTP.Simple
   ( getResponseBody
@@ -140,6 +140,7 @@ import Network.HTTP.Simple
   , setRequestSecure
   )
 import Network.HTTP.Types.Status (statusCode)
+import Langchain.LLM.Core (ToolCall(..))
 
 {- | Represents a chunk of the chat completion response in a streaming context.
 Contains a list of possible choices for the completion.
@@ -243,7 +244,7 @@ data ChatCompletionRequest = ChatCompletionRequest
   -- ^ Sampling temperature (range: 0.0 to 2.0)
   , toolChoice :: Maybe ToolChoice
   -- ^ How to choose tools for the model
-  , tools :: Maybe [Tool_]
+  , tools :: Maybe [InputTool]
   -- ^ Tools available to the model
   , topLogprobs :: Maybe Int
   -- ^ Number of top log probabilities to return
@@ -337,8 +338,6 @@ data Message = Message
   -- ^ The content of the message
   , name :: Maybe Text
   -- ^ Optional name of the sender
-  , functionCall :: Maybe FunctionCall_
-  -- ^ Optional function call information
   , toolCalls :: Maybe [ToolCall]
   -- ^ Optional tool call information
   , messageToolCallId :: Maybe Text
@@ -357,7 +356,6 @@ defaultMessage =
     { role = User
     , content = Nothing
     , name = Nothing
-    , functionCall = Nothing
     , toolCalls = Nothing
     , messageToolCallId = Nothing
     , messageAudio = Nothing
@@ -370,7 +368,6 @@ instance ToJSON Message where
       ["role" .= role]
         ++ maybe [] (\c -> ["content" .= c]) content
         ++ maybe [] (\n -> ["name" .= n]) name
-        ++ maybe [] (\fc -> ["function_call" .= fc]) functionCall
         ++ maybe [] (\tc -> ["tool_calls" .= tc]) toolCalls
         ++ maybe [] (\tcid -> ["tool_call_id" .= tcid]) messageToolCallId
         ++ maybe [] (\a -> ["audio" .= a]) messageAudio
@@ -382,7 +379,6 @@ instance FromJSON Message where
       <$> v .: "role"
       <*> v .:? "content"
       <*> v .:? "name"
-      <*> v .:? "function_call"
       <*> v .:? "tool_calls"
       <*> v .:? "tool_call_id"
       <*> v .:? "audio"
@@ -462,105 +458,86 @@ instance FromJSON TextContent where
       <$> v .: "text"
       <*> v .: "type"
 
--- | Represents a tool that can be used in the conversation.
-data Tool_ = Tool_
+data InputTool = InputTool
   { toolType :: Text
   -- ^ The type of the tool
-  , function :: Function_
+  , function :: FunctionDef
   -- ^ The function associated with the tool
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON Tool_ where
-  toJSON Tool_ {..} =
+instance ToJSON InputTool where
+  toJSON InputTool {..} =
     object
       [ "type" .= toolType
       , "function" .= function
       ]
 
-instance FromJSON Tool_ where
+instance FromJSON InputTool where
   parseJSON = withObject "Tool" $ \v ->
-    Tool_
+    InputTool
       <$> v .: "type"
       <*> v .: "function"
 
 -- | Represents a function that can be called by the model.
-data Function_ = Function_
+data FunctionDef = FunctionDef
   { functionName :: Text
   -- ^ The name of the function
-  , description :: Maybe Text
+  , functionDescription :: Maybe Text
   -- ^ Optional description of the function
-  , parameters :: Maybe Value
+  , functionParameters :: Maybe FunctionParameters
   -- ^ Optional parameters for the function
-  , strict :: Maybe Bool
+  , functionStrict :: Maybe Bool
   -- ^ Optional strictness flag
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON Function_ where
-  toJSON Function_ {..} =
+instance ToJSON FunctionDef where
+  toJSON FunctionDef {..} =
     object $
       [ "name" .= functionName
       ]
-        ++ maybe [] (\d -> ["description" .= d]) description
-        ++ maybe [] (\p -> ["parameters" .= p]) parameters
-        ++ maybe [] (\s -> ["strict" .= s]) strict
+        ++ maybe [] (\d -> ["description" .= d]) functionDescription
+        ++ maybe [] (\p -> ["parameters" .= p]) functionParameters
+        ++ maybe [] (\s -> ["strict" .= s]) functionStrict
 
-instance FromJSON Function_ where
+instance FromJSON FunctionDef where
   parseJSON = withObject "Function" $ \v ->
-    Function_
+    FunctionDef
       <$> v .: "name"
       <*> v .:? "description"
       <*> v .:? "parameters"
       <*> v .:? "strict"
 
--- | Represents a call to a tool.
-data ToolCall = ToolCall
-  { toolCallId :: Text
-  -- ^ The ID of the tool call
-  , toolCallToolType :: Text
-  -- ^ The type of the tool
-  , toolCallfunction :: FunctionCall_
-  -- ^ The function call
+-- | Parameters definition for a function call used in structured output or tool calls.
+data FunctionParameters = FunctionParameters
+  { parameterType :: Text
+  -- ^ Type of the parameter (usually "object").
+  , parameterProperties :: Maybe (HM.Map Text FunctionParameters)
+  -- ^ Optional nested parameters as a property map.
+  , requiredParams :: Maybe [Text]
+  -- ^ List of required parameter names.
+  , additionalProperties :: Maybe Bool
+  -- ^ Whether additional (unspecified) parameters are allowed.
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq)
 
-instance ToJSON ToolCall where
-  toJSON ToolCall {..} =
+instance ToJSON FunctionParameters where
+  toJSON FunctionParameters {..} =
     object
-      [ "id" .= toolCallId
-      , "type" .= toolCallToolType
-      , "function" .= toolCallfunction
+      [ "type" .= parameterType
+      , "properties" .= parameterProperties
+      , "required" .= requiredParams
+      , "additionalProperties" .= additionalProperties
       ]
 
-instance FromJSON ToolCall where
-  parseJSON = withObject "ToolCall" $ \v ->
-    ToolCall
-      <$> v .: "id"
-      <*> v .: "type"
-      <*> v .: "function"
-
--- | Represents a call to a function.
-data FunctionCall_ = FunctionCall_
-  { functionCallName :: Text
-  -- ^ The name of the function
-  , arguments :: Text
-  -- ^ The arguments for the function
-  }
-  deriving (Show, Eq, Generic)
-
-instance ToJSON FunctionCall_ where
-  toJSON FunctionCall_ {..} =
-    object
-      [ "name" .= functionCallName
-      , "arguments" .= arguments
-      ]
-
-instance FromJSON FunctionCall_ where
-  parseJSON = withObject "FunctionCall" $ \v ->
-    FunctionCall_
-      <$> v .: "name"
-      <*> v .: "arguments"
+instance FromJSON FunctionParameters where
+  parseJSON = withObject "parameters" $ \v ->
+    FunctionParameters
+      <$> v .: "type"
+      <*> v .: "properties"
+      <*> v .: "required"
+      <*> v .: "additionalProperties"
 
 -- | Represents token usage information.
 data Usage = Usage
@@ -1030,7 +1007,7 @@ createChatCompletion apiKey r = do
   let status = statusCode $ getResponseStatus response
   if status >= 200 && status < 300
     then case eitherDecode (getResponseBody response) of
-      Left err -> return $ Left $ "JSON parse error: " <> err
+      Left err -> return $ Left $ "JSON parse error: " <> err <> (show $ getResponseBody response)
       Right completionResponse -> return $ Right completionResponse
     else return $ Left $ "API error: " <> show status <> " " <> show (getResponseBody response)
 
@@ -1149,13 +1126,13 @@ defaultReasoningEffort :: ReasoningEffort
 defaultReasoningEffort = Low
 
 -- | Default function.
-defaultFunction :: Function_
+defaultFunction :: FunctionDef
 defaultFunction =
-  Function_
+  FunctionDef
     { functionName = "default_function"
-    , description = Nothing
-    , parameters = Nothing
-    , strict = Nothing
+    , functionDescription = Nothing
+    , functionParameters = Nothing
+    , functionStrict = Nothing
     }
 
 instance LLM.MessageConvertible Message where
@@ -1163,6 +1140,8 @@ instance LLM.MessageConvertible Message where
     defaultMessage
       { role = toRole $ LLM.role msg
       , content = Just $ StringContent (LLM.content msg)
+      , name = LLM.name (LLM.messageData msg)
+      , toolCalls = LLM.toolCalls (LLM.messageData msg)
       }
     where
       toRole :: LLM.Role -> Role
@@ -1180,7 +1159,10 @@ instance LLM.MessageConvertible Message where
       , LLM.content = case content msg of
           Just (StringContent txt) -> txt
           _ -> "" -- Handle other cases like `Nothing` or other content types as needed
-      , LLM.messageData = LLM.defaultMessageData -- TODO: implement ToolCalls for OpenAI
+      , LLM.messageData = LLM.defaultMessageData {
+            LLM.name = name msg
+          , LLM.toolCalls = toolCalls msg
+        }
       }
     where
       fromRole :: Role -> LLM.Role

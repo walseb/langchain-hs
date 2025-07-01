@@ -27,6 +27,8 @@ dependencies:
 - langchain-hs
 - transformers
 - containers
+- ollama-haskell
+- scientific
 
 ghc-options:
 - -Wall

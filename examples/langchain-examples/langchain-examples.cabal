@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      App.Ollama.ToolCall
       App.OpenRouter.PdfQA
       Lib
   other-modules:
@@ -38,6 +39,8 @@ library
     , bytestring
     , containers
     , langchain-hs
+    , ollama-haskell
+    , scientific
     , text
     , transformers
   default-language: Haskell2010
@@ -56,6 +59,8 @@ executable langchain-examples-exe
     , containers
     , langchain-examples
     , langchain-hs
+    , ollama-haskell
+    , scientific
     , text
     , transformers
   default-language: Haskell2010
@@ -75,6 +80,8 @@ test-suite langchain-examples-test
     , containers
     , langchain-examples
     , langchain-hs
+    , ollama-haskell
+    , scientific
     , text
     , transformers
   default-language: Haskell2010

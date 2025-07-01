@@ -50,6 +50,7 @@ library
       Langchain.LLM.Huggingface
       Langchain.LLM.Internal.Huggingface
       Langchain.LLM.Internal.OpenAI
+      Langchain.LLM.Internal.SchemaBuilder
       Langchain.LLM.Ollama
       Langchain.LLM.OpenAI
       Langchain.LLM.OpenAICompatible

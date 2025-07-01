@@ -124,12 +124,14 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.IORef
 import Data.Map (Map)
+import qualified Data.Map as HM
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import GHC.Generics
+import Langchain.LLM.Core (ToolCall (..))
 import qualified Langchain.LLM.Core as LLM
-import qualified Data.Map as HM
+import Langchain.LLM.Internal.SchemaBuilder
 import Network.HTTP.Conduit
 import Network.HTTP.Simple
   ( getResponseBody
@@ -140,7 +142,6 @@ import Network.HTTP.Simple
   , setRequestSecure
   )
 import Network.HTTP.Types.Status (statusCode)
-import Langchain.LLM.Core (ToolCall(..))
 
 {- | Represents a chunk of the chat completion response in a streaming context.
 Contains a list of possible choices for the completion.
@@ -816,24 +817,21 @@ instance FromJSON PredictionOutput where
       <*> v .: "content"
 
 -- | Specifies the format of the response.
-data ResponseFormat = JsonObjectFormat | JsonSchemaFormat Value
+data ResponseFormat = JsonObjectFormat | JsonSchemaFormat Text Schema Bool
   deriving (Show, Eq, Generic)
 
 instance ToJSON ResponseFormat where
   toJSON JsonObjectFormat = object ["type" .= ("json_object" :: Text)]
-  toJSON (JsonSchemaFormat schema) =
+  toJSON (JsonSchemaFormat name schema strict) =
     object
       [ "type" .= ("json_schema" :: Text)
-      , "json_schema" .= schema
+      , "json_schema"
+          .= object
+            [ "name" .= name
+            , "schema" .= schema
+            , "strict" .= strict
+            ]
       ]
-
-instance FromJSON ResponseFormat where
-  parseJSON = withObject "ResponseFormat" $ \v -> do
-    formatType <- v .: "type"
-    case formatType of
-      String "json_object" -> return JsonObjectFormat
-      String "json_schema" -> JsonSchemaFormat <$> v .: "json_schema"
-      _ -> fail $ "Invalid response format type: " ++ show formatType
 
 -- | Options for streaming responses.
 data StreamOptions = StreamOptions
@@ -1159,10 +1157,11 @@ instance LLM.MessageConvertible Message where
       , LLM.content = case content msg of
           Just (StringContent txt) -> txt
           _ -> "" -- Handle other cases like `Nothing` or other content types as needed
-      , LLM.messageData = LLM.defaultMessageData {
-            LLM.name = name msg
-          , LLM.toolCalls = toolCalls msg
-        }
+      , LLM.messageData =
+          LLM.defaultMessageData
+            { LLM.name = name msg
+            , LLM.toolCalls = toolCalls msg
+            }
       }
     where
       fromRole :: Role -> LLM.Role

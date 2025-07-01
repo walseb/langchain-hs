@@ -184,18 +184,20 @@ instance LLM Ollama where
   --
   chat (Ollama model cbs) messages mbOllamaParams = do
     mapM_ (\cb -> cb LLMStart) cbs
+    let ops =
+          OllamaChat.defaultChatOps
+            { OllamaChat.chatModelName = model
+            , OllamaChat.messages = NonEmpty.map to messages
+            , OllamaChat.stream = Nothing
+            , OllamaChat.tools = maybe Nothing tools mbOllamaParams
+            , OllamaChat.format = maybe Nothing format mbOllamaParams
+            , OllamaChat.keepAlive = maybe Nothing keepAlive mbOllamaParams
+            , OllamaChat.options = maybe Nothing options mbOllamaParams
+            , OllamaChat.think = maybe Nothing think mbOllamaParams
+            }
     eRes <-
       OllamaChat.chat
-        OllamaChat.defaultChatOps
-          { OllamaChat.chatModelName = model
-          , OllamaChat.messages = NonEmpty.map to messages
-          , OllamaChat.stream = Nothing
-          , OllamaChat.tools = maybe Nothing tools mbOllamaParams
-          , OllamaChat.format = maybe Nothing format mbOllamaParams
-          , OllamaChat.keepAlive = maybe Nothing keepAlive mbOllamaParams
-          , OllamaChat.options = maybe Nothing options mbOllamaParams
-          , OllamaChat.think = maybe Nothing think mbOllamaParams
-          }
+        ops
         ( Just
             OllamaChat.defaultOllamaConfig
               { OllamaChat.hostUrl =

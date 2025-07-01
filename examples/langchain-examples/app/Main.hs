@@ -1,7 +1,9 @@
 module Main (main) where
 
--- import qualified App.OpenRouter.PdfQA as PdfQA
-import qualified App.OpenRouter.ToolCall as ToolCall
+-- import App.OpenRouter.PdfQA 
+-- import App.OpenRouter.ToolCall 
+-- import App.Ollama.StructuredOutput 
+import App.OpenRouter.StructuredOutput 
 
 main :: IO ()
-main = ToolCall.runApp
+main = runApp

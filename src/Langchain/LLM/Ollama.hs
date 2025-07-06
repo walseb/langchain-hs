@@ -228,7 +228,7 @@ instance LLM Ollama where
   --  >>> stream (Ollama "llama3" []) messages handler Nothing
   --  Token: H Token: i Complete
   --
-  stream (Ollama model_ cbs) messages StreamHandler {onToken} mbOllamaParams = do
+  stream (Ollama model_ cbs) messages StreamHandler {onToken, onComplete} mbOllamaParams = do
     mapM_ (\cb -> cb LLMStart) cbs
     eRes <-
       OllamaChat.chat
@@ -258,6 +258,7 @@ instance LLM Ollama where
         mapM_ (\cb -> cb (LLMError $ show err)) cbs
         return $ Left (show err)
       Right _ -> do
+        onComplete
         mapM_ (\cb -> cb LLMEnd) cbs
         return $ Right ()
 

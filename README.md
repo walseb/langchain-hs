@@ -24,6 +24,7 @@ LangChain Haskell is a robust port of the original [LangChain](https://github.co
 - **Text Splitter**: Components for splitting text into smaller chunks for processing.
 - **Output Parser**: Components for parsing and processing the output of LLMs.
 - **VectorStore and Retriever**: Mechanism for storing and retrieving document embeddings.
+   * Includes support for Faiss, a library for efficient similarity search. This integration is available through the separate [`faiss-hs`](https://github.com/tusharad/faiss-hs) repository.
 - **Embeddings**: Components for generating vector representations of text.
 
 ## Current Supported Providers
@@ -31,6 +32,7 @@ LangChain Haskell is a robust port of the original [LangChain](https://github.co
   - Ollama
   - OpenAI
   - Huggingface
+  - OpenAI compatible APIs (LMStudio, OpenRouter, Llama-cpp, Deepseek)
   - More to come...
 
 ## Installation

@@ -12,10 +12,10 @@ Stability   : experimental
 DirectoryLoader document loader implements functionality for reading files from disk into Documents
 -}
 module Langchain.DocumentLoader.DirectoryLoader
-  ( 
-    -- * Directory loader
+  ( -- * Directory loader
     DirectoryLoader (..)
   , DirectoryLoaderOptions (..)
+
     -- * Default functions
   , defaultDirectoryLoaderOptions
   ) where
@@ -28,7 +28,7 @@ import Langchain.DocumentLoader.FileLoader (FileLoader (FileLoader))
 import Langchain.DocumentLoader.PdfLoader (PdfLoader (PdfLoader))
 import Langchain.TextSplitter.Character
 import System.Directory (doesDirectoryExist, doesFileExist, listDirectory)
-import System.FilePath (takeFileName, takeExtension, (</>))
+import System.FilePath (takeExtension, takeFileName, (</>))
 
 -- | Options for directory loading behavior
 data DirectoryLoaderOptions = DirectoryLoaderOptions
@@ -104,7 +104,11 @@ getFilesInDirectory opts currentDepth dir = do
 
         -- Process subdirectories (potentially in parallel)
         if useMultithreading opts && not (null visibleSubdirs)
-          then concat <$> mapConcurrently (getFilesInDirectory opts (currentDepth + 1)) visibleSubdirs
+          then
+            concat
+              <$> mapConcurrently
+                (getFilesInDirectory opts (currentDepth + 1))
+                visibleSubdirs
           else concat <$> mapM (getFilesInDirectory opts (currentDepth + 1)) visibleSubdirs
       else return []
 

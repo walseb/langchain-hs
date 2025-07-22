@@ -135,7 +135,7 @@ runAgentLoop agent agentState@AgentState {..} currIter maxIter
               updatedMemResult <- addMessage agentMemory toolMsg
               case updatedMemResult of
                 Left err -> return $ Left err
-                Right updatedMem ->
+                Right updatedMem -> 
                   let updatedState =
                         agentState
                           { agentMemory = updatedMem

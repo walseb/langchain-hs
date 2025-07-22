@@ -123,7 +123,7 @@ instance Tool WikipediaTool where
   --  "A wrapper around Wikipedia. Useful for answering..."
   --
   toolDescription _ =
-    "A wrapper around Wikipedia. Useful for answering general questions about people, places, companies, facts, historical events, or other subjects. Input should be a search query."
+    "A wrapper around Wikipedia. Useful for answering general questions about people, places, companies, facts, historical events, or other subjects. Input should be a single worded search query."
 
   -- \|
   --  Executes Wikipedia search and content retrieval.

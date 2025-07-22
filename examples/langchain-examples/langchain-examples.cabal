@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      App.Ollama.Agent
       App.Ollama.MultiAgent
       App.Ollama.StructuredOutput
       App.Ollama.ToolCall

@@ -105,7 +105,9 @@ class Agent a where
   agentToolsM = liftIO . agentTools
 
 -- | Function that *starts* the agent process.
-runAgent :: (Agent a, BaseMemory m) => a -> AgentState m -> Text -> IO (Either String AgentFinish)
+runAgent ::
+  (Agent a, BaseMemory m) =>
+  a -> AgentState m -> Text -> IO (Either String AgentFinish)
 runAgent agent initialState@AgentState {..} initialInput = do
   memWithInput <- addUserMessage agentMemory initialInput
   case memWithInput of
@@ -116,7 +118,12 @@ runAgent agent initialState@AgentState {..} initialInput = do
 
 -- | Helper function for runAgent
 runAgentLoop ::
-  (Agent a, BaseMemory m) => a -> AgentState m -> Int -> Int -> IO (Either String AgentFinish)
+  (Agent a, BaseMemory m) =>
+  a ->
+  AgentState m ->
+  Int ->
+  Int ->
+  IO (Either String AgentFinish)
 runAgentLoop agent agentState@AgentState {..} currIter maxIter
   | currIter > maxIter = return $ Left "Max iterations excedded"
   | otherwise = do
@@ -131,21 +138,28 @@ runAgentLoop agent agentState@AgentState {..} currIter maxIter
             Left err -> return $ Left err
             Right result -> do
               -- Add the tool result to memory as a tool message
+              print ("tool result " :: String, result)
               let toolMsg = Message Tool result defaultMessageData
               updatedMemResult <- addMessage agentMemory toolMsg
               case updatedMemResult of
                 Left err -> return $ Left err
-                Right updatedMem -> 
+                Right updatedMem ->
                   let updatedState =
                         agentState
                           { agentMemory = updatedMem
-                          , agentToolResults = agentToolResults ++ [(actionToolName, result)]
+                          , agentToolResults =
+                              agentToolResults
+                                ++ [(actionToolName, result)]
                           , agentSteps = agentSteps ++ [act]
                           }
                    in runAgentLoop agent updatedState (currIter + 1) maxIter
 
 -- | Alias for planNextAction
-runSingleStep :: (Agent a, BaseMemory m) => a -> AgentState m -> IO (Either String AgentStep)
+runSingleStep ::
+  (Agent a, BaseMemory m) =>
+  a ->
+  AgentState m ->
+  IO (Either String AgentStep)
 runSingleStep = planNextAction
 
 {- |
@@ -162,7 +176,10 @@ executeTool tools toolName_ input = do
         result <- runTool anyTool typedInput
         return $ outputToText result
       case resultE of
-        Left ex -> return $ Left $ "Tool execution error: " <> show (ex :: SomeException)
+        Left ex ->
+          return $
+            Left $
+              "Tool execution error: " <> show (ex :: SomeException)
         Right output -> return $ Right output
 
 {- |
@@ -170,4 +187,4 @@ Helper for creating custom tool wrappers
 Requires conversion functions between Text and tool-specific types.
 -}
 customAnyTool :: Tool a => a -> (Text -> Input a) -> (Output a -> Text) -> AnyTool
-customAnyTool tool inputConv outputConv = AnyTool tool inputConv outputConv
+customAnyTool = AnyTool

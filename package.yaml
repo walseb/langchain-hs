@@ -38,6 +38,7 @@ dependencies:
 - vector < 0.14
 - tagsoup < 0.15
 - parsec < 4
+- transformers
 
 ghc-options:
 - -Wall

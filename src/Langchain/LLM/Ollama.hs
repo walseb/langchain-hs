@@ -6,7 +6,10 @@
 
 {- |
 Module      : Langchain.LLM.Ollama
-Description : Ollama integration for LangChain Haskell
+Descrip
+-- AUTO 
+-- AUTO END 
+tion : Ollama integration for LangChain Haskell
 Copyright   : (c) 2025 Tushar Adhatrao
 License     : MIT
 Maintainer  : Tushar Adhatrao <tusharadhatrao@gmail.com>
@@ -235,7 +238,7 @@ instance LLM Ollama where
         OllamaChat.defaultChatOps
           { OllamaChat.chatModelName = model_
           , OllamaChat.messages = NonEmpty.map to messages
-          , OllamaChat.stream = Just $ onToken . maybe "" O.content . O.message
+          , OllamaChat.stream = undefined 
           , OllamaChat.tools = maybe Nothing tools mbOllamaParams
           , OllamaChat.format = maybe Nothing format mbOllamaParams
           , OllamaChat.keepAlive = maybe Nothing keepAlive mbOllamaParams

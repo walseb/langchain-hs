@@ -189,7 +189,7 @@ instance LLM Ollama where
     mapM_ (\cb -> cb LLMStart) cbs
     let ops =
           OllamaChat.defaultChatOps
-            { OllamaChat.chatModelName = model
+            { OllamaChat.modelName = model
             , OllamaChat.messages = NonEmpty.map to messages
             , OllamaChat.stream = Nothing
             , OllamaChat.tools = maybe Nothing tools mbOllamaParams
@@ -236,7 +236,7 @@ instance LLM Ollama where
     eRes <-
       OllamaChat.chat
         OllamaChat.defaultChatOps
-          { OllamaChat.chatModelName = model_
+          { OllamaChat.modelName = model_
           , OllamaChat.messages = NonEmpty.map to messages
           , OllamaChat.stream = undefined 
           , OllamaChat.tools = maybe Nothing tools mbOllamaParams

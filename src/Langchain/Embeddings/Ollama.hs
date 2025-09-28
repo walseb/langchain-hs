@@ -78,15 +78,9 @@ instance Embeddings OllamaEmbeddings where
   --
   embedDocuments (OllamaEmbeddings {..}) docs = do
     -- For each input text, make an individual API call
-    eRes <- embeddingOps
-                model
-                (map pageContent docs)
-                defaultTruncate
-                defaultKeepAlive
-                modelOptions
-                Nothing
+    eRes <- undefined 
     case eRes of
-        Left ollamaErr -> return $ Left $ show ollamaErr
+        Left ollamaErr -> return $ Left $ undefined 
         Right r -> return $ Right $ respondedEmbeddings r
         
 
@@ -98,16 +92,9 @@ instance Embeddings OllamaEmbeddings where
   --  Right [0.3, 0.4, ...]
   --
   embedQuery (OllamaEmbeddings {..}) query = do
-    res <-
-      embeddingOps
-        model
-        [query]
-        defaultTruncate
-        defaultKeepAlive
-        modelOptions
-        Nothing
+    res <- undefined 
     case fmap respondedEmbeddings res of
-      Left err -> pure $ Left (show err)
+      Left err -> pure $ Left undefined
       Right lst ->
         case listToMaybe lst of
           Nothing -> pure $ Left "Embeddings are empty"
